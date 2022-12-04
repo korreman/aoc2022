@@ -1,10 +1,10 @@
 use itertools::Itertools;
 
 fn priority(c: u8) -> u32 {
-    let p = if (0x41..0x5b).contains(&c) {
-        c - 0x41 + 27
-    } else if (0x61..0x7b).contains(&c) {
-        c - 0x61 + 1
+    let p = if (b'A'..=b'Z').contains(&c) {
+        c - b'A' + 27
+    } else if (b'a'..=b'z').contains(&c) {
+        c - b'a' + 1
     } else {
         panic!()
     };

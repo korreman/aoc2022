@@ -1,18 +1,16 @@
+use itertools::Itertools;
+
 pub fn run(input: &str) -> (u32, u32) {
     let mut res1 = 0;
     let mut res2 = 0;
     for line in input.lines() {
-        let mut ranges = line.split(['-', ',']);
-        let a = ranges.next().unwrap().parse::<u32>().unwrap();
-        let b = ranges.next().unwrap().parse::<u32>().unwrap();
-        let c = ranges.next().unwrap().parse::<u32>().unwrap();
-        let d = ranges.next().unwrap().parse::<u32>().unwrap();
-        if a <= c && b >= d || c <= a && d >= b {
+        let ranges = line.split(['-', ',']).map(|n| n.parse::<u32>().unwrap());
+        let (a, b, c, d) = ranges.collect_tuple().unwrap();
+
+        if a <= c && d <= b || c <= a && b <= d {
             res1 += 1;
         }
-        let elf1 = a..=b;
-        let elf2 = c..=d;
-        if elf1.contains(&c) || elf1.contains(&d) || elf2.contains(&a) || elf2.contains(&b) {
+        if a <= d && c <= b {
             res2 += 1;
         }
     }

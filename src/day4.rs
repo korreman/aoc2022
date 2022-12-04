@@ -3,10 +3,10 @@ pub fn run(input: &str) -> (u32, u32) {
     let mut res2 = 0;
     for line in input.lines() {
         let mut ranges = line.split(['-', ',']);
-        let a = u32::from_str_radix(ranges.next().unwrap(), 10).unwrap();
-        let b = u32::from_str_radix(ranges.next().unwrap(), 10).unwrap();
-        let c = u32::from_str_radix(ranges.next().unwrap(), 10).unwrap();
-        let d = u32::from_str_radix(ranges.next().unwrap(), 10).unwrap();
+        let a = ranges.next().unwrap().parse::<u32>().unwrap();
+        let b = ranges.next().unwrap().parse::<u32>().unwrap();
+        let c = ranges.next().unwrap().parse::<u32>().unwrap();
+        let d = ranges.next().unwrap().parse::<u32>().unwrap();
         if a <= c && b >= d || c <= a && d >= b {
             res1 += 1;
         }

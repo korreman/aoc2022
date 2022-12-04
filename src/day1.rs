@@ -6,7 +6,7 @@ pub fn run(input: &str) -> (u32, u32) {
             elfs.push(elf_calories);
             elf_calories = 0;
         } else {
-            let calories = u32::from_str_radix(line, 10).unwrap();
+            let calories = line.parse::<u32>().unwrap();
             elf_calories += calories;
         }
     }

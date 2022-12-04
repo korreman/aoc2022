@@ -5,6 +5,7 @@ use comfy_table::{presets::UTF8_FULL_CONDENSED, Cell, CellAlignment, Table};
 mod day1;
 mod day2;
 mod day3;
+mod day4;
 
 fn main() {
     let mut table = Table::new();
@@ -30,6 +31,7 @@ fn main() {
     run_day(1, &day1::run, "input/day1.txt");
     run_day(2, &day2::run, "input/day2.txt");
     run_day(3, &day3::run, "input/day3.txt");
+    run_day(4, &day4::run, "input/day4.txt");
 
     println!("{table}");
 }

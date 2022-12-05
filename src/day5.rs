@@ -34,7 +34,7 @@ pub fn run(input: &str) -> (String, String) {
 
     // Parse instructions.
     let instrs = inp_instrs.lines().map(|line| {
-        // Split on whitespace, so this can support more than 9 stacks in principle.
+        // Split on whitespace and discard irrelevant words.
         let (_, num, _, src, _, dst) = line.split_ascii_whitespace().collect_tuple().unwrap();
         let num = num.parse::<usize>().unwrap();
         let src = src.parse::<usize>().unwrap() - 1;

@@ -7,8 +7,10 @@ struct Instr {
 }
 
 pub fn run(input: &str) -> (String, String) {
+    // Split the input into its two parts.
     let (inp_stacks, inp_instrs) = input.split("\n\n").collect_tuple().unwrap();
 
+    // Initialize the stacks from the bottom line of inputs.
     let mut stack_lines = inp_stacks.lines().rev();
     let mut stacks: Vec<Vec<char>> = stack_lines
         .next()
@@ -17,6 +19,7 @@ pub fn run(input: &str) -> (String, String) {
         .map(|_| Vec::new())
         .collect();
 
+    // Go through the remaining lines in top-to bottom while pushing letters to the stacks.
     for line in stack_lines {
         for (i, stack) in stacks.iter_mut().enumerate() {
             let c = line.chars().nth(1 + 4 * i).unwrap_or(' ');
@@ -25,9 +28,13 @@ pub fn run(input: &str) -> (String, String) {
             }
         }
     }
+
+    // Create a copy for part 2.
     let mut stacks2 = stacks.clone();
 
+    // Parse instructions.
     let instrs = inp_instrs.lines().map(|line| {
+        // Split on whitespace, so this can support more than 9 stacks in principle.
         let (_, num, _, src, _, dst) = line.split_ascii_whitespace().collect_tuple().unwrap();
         let num = num.parse::<usize>().unwrap();
         let src = src.parse::<usize>().unwrap() - 1;
@@ -52,13 +59,15 @@ pub fn run(input: &str) -> (String, String) {
     // Part 2
     let mut tmp = Vec::new();
     for Instr { num, src, dst } in &instrs {
+        // Push elements to a temporary vec and pop them one-by-one to preserve order.
+        // Not as efficient as extending dst with a whole section of src at a time,
+        // but I don't wanna deal with lifetimes.
         for _ in 0..*num {
             tmp.push(stacks2[*src].pop().expect("popped from an empty stack!"));
         }
-        for c in tmp.iter().rev() {
-            stacks2[*dst].push(*c);
+        while let Some(c) = tmp.pop() {
+            stacks2[*dst].push(c);
         }
-        tmp.clear();
     }
 
     let res2: String = stacks2

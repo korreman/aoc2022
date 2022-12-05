@@ -8,7 +8,7 @@ struct Instr {
 
 pub fn run(input: &str) -> (String, String) {
     // Split the input into its two parts.
-    let (inp_stacks, inp_instrs) = input.split("\n\n").collect_tuple().unwrap();
+    let (inp_stacks, inp_instrs) = input.split_once("\n\n").unwrap();
 
     // Initialize the stacks from the bottom line of inputs.
     let mut stack_lines = inp_stacks.lines().rev();

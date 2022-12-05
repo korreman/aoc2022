@@ -83,7 +83,7 @@ pub fn run(input: &str) -> (u32, u32) {
     let mut score1 = 0;
     let mut score2 = 0;
     for line in input.lines() {
-        let them = Play::from_letter(line.chars().nth(0).unwrap());
+        let them = Play::from_letter(line.chars().next().unwrap());
         let me = Play::from_letter(line.chars().nth(2).unwrap());
         score1 += me.score();
         score1 += me.fight(them).score();

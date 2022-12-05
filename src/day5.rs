@@ -33,15 +33,17 @@ pub fn run(input: &str) -> (String, String) {
     let mut stacks2 = stacks.clone();
 
     // Parse instructions.
-    let instrs = inp_instrs.lines().map(|line| {
-        // Split on whitespace and discard irrelevant words.
-        let (_, num, _, src, _, dst) = line.split_ascii_whitespace().collect_tuple().unwrap();
-        let num = num.parse::<usize>().unwrap();
-        let src = src.parse::<usize>().unwrap() - 1;
-        let dst = dst.parse::<usize>().unwrap() - 1;
-        Instr { num, src, dst }
-    }).collect_vec();
-
+    let instrs = inp_instrs
+        .lines()
+        .map(|line| {
+            // Split on whitespace and discard irrelevant words.
+            let (_, num, _, src, _, dst) = line.split_ascii_whitespace().collect_tuple().unwrap();
+            let num = num.parse::<usize>().unwrap();
+            let src = src.parse::<usize>().unwrap() - 1;
+            let dst = dst.parse::<usize>().unwrap() - 1;
+            Instr { num, src, dst }
+        })
+        .collect_vec();
 
     // Part 1
     for Instr { num, src, dst } in &instrs {

@@ -2,7 +2,7 @@ pub fn run(input: &str) -> (u32, u32) {
     let mut elf_calories = 0;
     let mut elfs = Vec::new();
     for line in input.lines() {
-        if line == "" {
+        if line.is_empty() {
             elfs.push(elf_calories);
             elf_calories = 0;
         } else {

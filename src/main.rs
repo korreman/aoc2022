@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use comfy_table::{presets::UTF8_FULL_CONDENSED, Cell, CellAlignment, Table};
 
@@ -10,36 +10,64 @@ mod day4;
 mod day5;
 
 fn main() {
-    let mut table = Table::new();
-    table.load_preset(UTF8_FULL_CONDENSED);
-    table.set_header(vec!["Day", "Part 1", "Part 2", "Time"]);
+    let mut state = State::new();
+    state.run_day(&day1::run, "input/day1.txt");
+    state.run_day(&day2::run, "input/day2.txt");
+    state.run_day(&day3::run, "input/day3.txt");
+    state.run_day(&day4::run, "input/day4.txt");
+    state.run_day(&day5::run, "input/day5.txt");
 
-    run_day(&mut table, 1, &day1::run, "input/day1.txt");
-    run_day(&mut table, 2, &day2::run, "input/day2.txt");
-    run_day(&mut table, 3, &day3::run, "input/day3.txt");
-    run_day(&mut table, 4, &day4::run, "input/day4.txt");
-    run_day(&mut table, 5, &day5::run, "input/day5.txt");
-
-    println!("{table}");
+    state.print();
 }
 
-fn run_day<A1: Display, A2: Display>(
-    table: &mut Table,
-    day: u32,
-    task: &dyn Fn(&str) -> (A1, A2),
-    input_path: &str,
-) {
-    let input = std::fs::read_to_string(input_path).unwrap();
+struct State {
+    day_counter: usize,
+    table: Table,
+    total: Duration,
+}
 
-    let start = Instant::now();
-    let (res1, res2) = task(input.as_str());
-    let end = Instant::now();
-    let delta = end.duration_since(start);
+impl State {
+    fn new() -> Self {
+        let mut table = Table::new();
+        table.load_preset(UTF8_FULL_CONDENSED);
+        table.set_header(vec!["Day", "Part 1", "Part 2", "Time"]);
+        Self {
+            day_counter: 1,
+            table,
+            total: Duration::ZERO,
+        }
+    }
 
-    table.add_row(vec![
-        Cell::new(day.to_string()).set_alignment(CellAlignment::Right),
-        Cell::new(res1.to_string()).set_alignment(CellAlignment::Right),
-        Cell::new(res2.to_string()).set_alignment(CellAlignment::Right),
-        Cell::new(format!("{delta:.2?}")).set_alignment(CellAlignment::Right),
-    ]);
+    fn run_day<A1: Display, A2: Display>(
+        &mut self,
+        task: &dyn Fn(&str) -> (A1, A2),
+        input_path: &str,
+    ) {
+        let input = std::fs::read_to_string(input_path).unwrap();
+
+        let start = Instant::now();
+        let (res1, res2) = task(input.as_str());
+        let end = Instant::now();
+        let delta = end.duration_since(start);
+
+        self.table.add_row(vec![
+            Cell::new(self.day_counter.to_string()).set_alignment(CellAlignment::Right),
+            Cell::new(res1.to_string()).set_alignment(CellAlignment::Right),
+            Cell::new(res2.to_string()).set_alignment(CellAlignment::Right),
+            Cell::new(format!("{delta:.2?}")).set_alignment(CellAlignment::Right),
+        ]);
+        self.total += delta;
+        self.day_counter += 1;
+    }
+
+    fn print(mut self) {
+        self.table.add_row(vec!["", "", "", ""]);
+        self.table.add_row(vec![
+            Cell::new("Total"),
+            Cell::new(""),
+            Cell::new(""),
+            Cell::new(format!("{:.2?}", self.total)).set_alignment(CellAlignment::Right),
+        ]);
+        println!("{}", self.table);
+    }
 }

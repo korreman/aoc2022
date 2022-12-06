@@ -10,11 +10,8 @@ fn task(input: &str, length: usize) -> usize {
         .windows(length)
         .enumerate()
         .find(|(_, window)| {
-            window
-                .iter()
-                .fold(0u32, |acc, c| (acc | (1 << (c - b'a'))))
-                .count_ones()
-                == length as u32
+            let set = window.iter().fold(0u32, |acc, c| (acc | (1 << (c - b'a'))));
+            set.count_ones() == length as u32
         })
         .expect("no packet marker detected!")
         .0

@@ -4,20 +4,18 @@ pub fn run(input: &str) -> (usize, usize) {
     (res1, res2)
 }
 
-fn task(input: &str, window_size: usize) -> usize {
+fn task(input: &str, length: usize) -> usize {
     input
         .as_bytes()
-        .windows(window_size)
+        .windows(length)
         .enumerate()
-        .find_map(|(offset, bytes)| {
-            let p = bytes
+        .find(|(_, window)| {
+            window
                 .iter()
-                .all(|b| bytes.iter().filter(|b2| b == *b2).count() == 1);
-            if p {
-                Some(offset)
-            } else {
-                None
-            }
+                .fold(0u32, |acc, c| (acc | (1 << (c - b'a'))))
+                .count_ones()
+                == length as u32
         })
         .expect("no packet marker detected!")
+        .0
 }

@@ -2,22 +2,22 @@ use indextree::{Arena, NodeEdge, NodeId};
 use itertools::Itertools;
 
 #[derive(Debug)]
-struct Entry {
-    name: String,
+struct Entry<'a> {
+    name: &'a str,
     directory: bool,
     size: Option<usize>,
 }
 
-struct DirTree {
-    arena: Arena<Entry>,
+struct DirTree<'a> {
+    arena: Arena<Entry<'a>>,
     root: NodeId,
 }
 
-impl DirTree {
+impl<'a> DirTree<'a> {
     fn new() -> Self {
         let mut data = Arena::new();
         let root = data.new_node(Entry {
-            name: "/".to_owned(),
+            name: "/",
             directory: true,
             size: None,
         });
@@ -61,7 +61,7 @@ pub fn run(input: &str) -> (usize, usize) {
                 match listing.split_once(' ').unwrap() {
                     ("dir", name) => {
                         let node = tree.arena.new_node(Entry {
-                            name: name.to_owned(),
+                            name: name,
                             directory: true,
                             size: None,
                         });
@@ -70,7 +70,7 @@ pub fn run(input: &str) -> (usize, usize) {
                     (size, name) => {
                         let size = size.parse::<usize>().unwrap();
                         let node = tree.arena.new_node(Entry {
-                            name: name.to_owned(),
+                            name: name,
                             directory: false,
                             size: Some(size),
                         });

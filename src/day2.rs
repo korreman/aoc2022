@@ -1,3 +1,5 @@
+use ascii::AsciiStr;
+
 #[derive(Clone, Copy)]
 enum Play {
     Rock,
@@ -79,7 +81,7 @@ impl Play {
     }
 }
 
-pub fn run(input: &str) -> (u32, u32) {
+pub fn run(input: &AsciiStr) -> (u32, u32) {
     let mut score1 = 0;
     let mut score2 = 0;
     for line in input

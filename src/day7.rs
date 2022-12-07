@@ -1,4 +1,6 @@
-pub fn run(input: &str) -> (u32, u32) {
+use ascii::AsciiStr;
+
+pub fn run(input: &AsciiStr) -> (u32, u32) {
     let input = input.as_bytes();
 
     // Tracks the directory sizes of each parent.

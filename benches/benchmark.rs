@@ -19,6 +19,9 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("Day 6", |b| {
         b.iter(|| aoc2022::day6::run(black_box(include_str!("../input/day6.txt"))))
     });
+    c.bench_function("Day 7", |b| {
+        b.iter(|| aoc2022::day7::run(black_box(include_str!("../input/day7.txt"))))
+    });
 }
 
 criterion_group!(benches, criterion_benchmark);

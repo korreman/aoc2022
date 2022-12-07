@@ -21,11 +21,11 @@ impl Outcome {
         }
     }
 
-    fn from_letter(letter: char) -> Self {
-        match letter {
-            'X' => Outcome::Lose,
-            'Y' => Outcome::Tie,
-            'Z' => Outcome::Win,
+    fn from_byte(b: u8) -> Self {
+        match b {
+            b'X' => Outcome::Lose,
+            b'Y' => Outcome::Tie,
+            b'Z' => Outcome::Win,
             _ => panic!(),
         }
     }
@@ -66,14 +66,14 @@ impl Play {
         }
     }
 
-    fn from_letter(letter: char) -> Self {
-        match letter {
-            'A' => Play::Rock,
-            'B' => Play::Paper,
-            'C' => Play::Scissors,
-            'X' => Play::Rock,
-            'Y' => Play::Paper,
-            'Z' => Play::Scissors,
+    fn from_byte(b: u8) -> Self {
+        match b {
+            b'A' => Play::Rock,
+            b'B' => Play::Paper,
+            b'C' => Play::Scissors,
+            b'X' => Play::Rock,
+            b'Y' => Play::Paper,
+            b'Z' => Play::Scissors,
             _ => panic!(),
         }
     }
@@ -82,13 +82,17 @@ impl Play {
 pub fn run(input: &str) -> (u32, u32) {
     let mut score1 = 0;
     let mut score2 = 0;
-    for line in input.lines() {
-        let them = Play::from_letter(line.chars().next().unwrap());
-        let me = Play::from_letter(line.chars().nth(2).unwrap());
+    for line in input
+        .as_bytes()
+        .split(|&b| b == b'\n')
+        .take_while(|l| l.len() == 3)
+    {
+        let them = Play::from_byte(line[0]);
+        let me = Play::from_byte(line[2]);
         score1 += me.score();
         score1 += me.fight(them).score();
 
-        let desired_outcome = Outcome::from_letter(line.chars().nth(2).unwrap());
+        let desired_outcome = Outcome::from_byte(line[2]);
         let actual_me = them.find_play(desired_outcome);
         score2 += actual_me.score();
         score2 += desired_outcome.score();

@@ -1,27 +1,24 @@
+use aoc2022::*;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
+macro_rules! bench {
+    ( $c:ident, $day:ident) => {
+        $c.bench_function(stringify!($day), |b| {
+            let input =
+                std::fs::read_to_string(concat!("input/", stringify!($day), ".txt")).unwrap();
+            b.iter(|| $day::run(black_box(input.as_str())))
+        });
+    };
+}
+
 pub fn criterion_benchmark(c: &mut Criterion) {
-    c.bench_function("Day 1", |b| {
-        b.iter(|| aoc2022::day1::run(black_box(include_str!("../input/day1.txt"))))
-    });
-    c.bench_function("Day 2", |b| {
-        b.iter(|| aoc2022::day2::run(black_box(include_str!("../input/day2.txt"))))
-    });
-    c.bench_function("Day 3", |b| {
-        b.iter(|| aoc2022::day3::run(black_box(include_str!("../input/day3.txt"))))
-    });
-    c.bench_function("Day 4", |b| {
-        b.iter(|| aoc2022::day4::run(black_box(include_str!("../input/day4.txt"))))
-    });
-    c.bench_function("Day 5", |b| {
-        b.iter(|| aoc2022::day5::run(black_box(include_str!("../input/day5.txt"))))
-    });
-    c.bench_function("Day 6", |b| {
-        b.iter(|| aoc2022::day6::run(black_box(include_str!("../input/day6.txt"))))
-    });
-    c.bench_function("Day 7", |b| {
-        b.iter(|| aoc2022::day7::run(black_box(include_str!("../input/day7.txt"))))
-    });
+    bench!(c, day1);
+    bench!(c, day2);
+    bench!(c, day3);
+    bench!(c, day4);
+    bench!(c, day5);
+    bench!(c, day6);
+    bench!(c, day7);
 }
 
 criterion_group!(benches, criterion_benchmark);

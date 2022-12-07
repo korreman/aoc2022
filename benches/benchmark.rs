@@ -1,24 +1,23 @@
 use aoc2022::*;
+use ascii::AsciiStr;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 macro_rules! input {
     ($day:ident) => {
-        let $day =
-            std::fs::read_to_string(concat!("input/", stringify!($day), ".txt")).unwrap();
+        let $day = std::fs::read_to_string(concat!("input/", stringify!($day), ".txt")).unwrap();
+        let $day = AsciiStr::from_ascii($day.as_bytes()).unwrap();
     };
 }
 
 macro_rules! run {
     ($day:ident) => {
-        $day::run(black_box($day.as_str()))
+        $day::run(black_box($day))
     };
 }
 
 macro_rules! bench {
     ( $c:ident, $day:ident) => {
-        $c.bench_function(stringify!($day), |b| {
-            b.iter(|| run!($day))
-        });
+        $c.bench_function(stringify!($day), |b| b.iter(|| run!($day)));
     };
 }
 

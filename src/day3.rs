@@ -12,9 +12,10 @@ fn priority(c: u8) -> u32 {
 }
 
 pub fn run(input: &str) -> (u32, u32) {
+    let input = input.as_bytes();
+
     let mut a = 0;
-    for line in input.lines() {
-        let line = line.as_bytes();
+    for line in input.split(|&b| b == b'\n') {
         let len = line.len();
         for item in &line[0..len / 2] {
             if line[len / 2..len].contains(item) {
@@ -25,9 +26,9 @@ pub fn run(input: &str) -> (u32, u32) {
     }
 
     let mut b = 0;
-    for (elf_a, elf_b, elf_c) in input.lines().tuples() {
-        for item in elf_a.as_bytes() {
-            if elf_b.bytes().contains(item) && elf_c.bytes().contains(item) {
+    for (elf_a, elf_b, elf_c) in input.split(|&b| b == b'\n').tuples() {
+        for item in elf_a {
+            if elf_b.contains(item) && elf_c.contains(item) {
                 b += priority(*item);
                 break;
             }

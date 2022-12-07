@@ -1,8 +1,6 @@
-use ascii::AsciiStr;
+use ascii::{AsciiChar, AsciiStr};
 
 pub fn run(input: &AsciiStr) -> (u32, u32) {
-    let input = input.as_bytes();
-
     // Tracks the directory sizes of each parent.
     let mut stack: Vec<u32> = vec![];
     // Records all directory sizes
@@ -11,9 +9,9 @@ pub fn run(input: &AsciiStr) -> (u32, u32) {
     let mut dir = 0;
 
     let mut res1 = 0;
-    for line in input.split(|&b| b == b'\n') {
+    for line in input.lines() {
         // We only need to parse relevant CLI lines
-        match line.strip_prefix(b"$ cd ") {
+        match line.as_bytes().strip_prefix(b"$ cd ") {
             Some(b"..") => {
                 dirs.push(dir);
                 if dir <= 100_000 {
@@ -26,10 +24,8 @@ pub fn run(input: &AsciiStr) -> (u32, u32) {
                 dir = 0;
             }
             _ => {
-                let word = unsafe {
-                    std::str::from_utf8_unchecked(line.split(|b| *b == b' ').next().unwrap())
-                };
-                if let Ok(file_size) = word.parse::<u32>() {
+                let word = line.split(AsciiChar::Space).next().unwrap();
+                if let Ok(file_size) = word.as_str().parse::<u32>() {
                     dir += file_size;
                 }
             }

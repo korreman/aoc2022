@@ -6,25 +6,13 @@ struct Tree {
     scenic_score: u32,
 }
 
-impl Tree {
-    fn update(&mut self, skyline: &mut Skyline) {
-        if self.height > skyline.height {
-            self.visible = true;
-            skyline.height = self.height;
-        }
-        self.scenic_score *= skyline.distances[self.height as usize];
-        for dist in skyline.distances.iter_mut().take(self.height as usize + 1) {
-            *dist = 0;
-        }
-    }
-}
-
 struct Skyline {
     height: i8,
     distances: [u32; 10],
 }
 
 impl Skyline {
+    #[inline]
     fn new() -> Self {
         Self {
             height: -1,
@@ -32,59 +20,57 @@ impl Skyline {
         }
     }
 
-    fn step(&mut self) {
+    #[inline]
+    fn step(&mut self, tree: &mut Tree) {
+        if tree.height > self.height {
+            tree.visible = true;
+            self.height = tree.height;
+        }
+        tree.scenic_score *= self.distances[tree.height as usize];
+        for dist in self.distances.iter_mut().take(tree.height as usize + 1) {
+            *dist = 0;
+        }
         self.distances.iter_mut().for_each(|d| *d += 1);
     }
 }
 
 pub fn run(input: &AsciiStr) -> (usize, u32) {
-    let mut grid: Vec<Vec<Tree>> = input
+    let mut lines = input.lines();
+    let width = lines.next().unwrap().len();
+    let mut grid: Vec<Tree> = input
         .lines()
-        .map(|line| {
-            line.as_bytes()
-                .iter()
-                .map(|b| Tree {
-                    height: (b - b'0') as i8,
-                    visible: false,
-                    scenic_score: 1,
-                })
-                .collect()
+        .flatten()
+        .map(|digit| {
+            let height = (digit.as_byte() - b'0') as i8;
+            assert!(height >= 0, "{height}"); // Why does this improve performance???
+            Tree {
+                height,
+                visible: false,
+                scenic_score: 1,
+            }
         })
         .collect();
 
-    let mut skyline_row: Vec<Skyline> = grid[0].iter().map(|_| Skyline::new()).collect();
-    for row in grid.iter_mut() {
-        for (skyline, tree) in skyline_row.iter_mut().zip(row.iter_mut()) {
-            tree.update(skyline);
-            skyline.step();
-        }
+    let mut skyline_t = Skyline::new(); // From top
+    let mut skyline_b = Skyline::new(); // From bottom
+    let mut skyline_l = Skyline::new(); // From left
+    let mut skyline_r = Skyline::new(); // From right
 
-        let mut skyline = Skyline::new();
-        for tree in row.iter_mut() {
-            tree.update(&mut skyline);
-            skyline.step();
+    for i in 0..width {
+        for j in 0..width {
+            skyline_t.step(&mut grid[j * width + i]);
+            skyline_l.step(&mut grid[i * width + j]);
+            skyline_b.step(&mut grid[(width - j - 1) * width + i]);
+            skyline_r.step(&mut grid[i * width + (width - 1 - j)]);
         }
-
-        skyline = Skyline::new();
-        for tree in row.iter_mut().rev() {
-            tree.update(&mut skyline);
-            skyline.step();
-        }
+        skyline_t = Skyline::new();
+        skyline_b = Skyline::new();
+        skyline_l = Skyline::new();
+        skyline_r = Skyline::new();
     }
 
-    for skyline in skyline_row.iter_mut() {
-        *skyline = Skyline::new();
-    }
-
-    for row in grid.iter_mut().rev() {
-        for (skyline, tree) in skyline_row.iter_mut().zip(row.iter_mut()) {
-            tree.update(skyline);
-            skyline.step();
-        }
-    }
-
-    let res1 = grid.iter().flatten().filter(|t| t.visible).count();
-    let res2 = grid.iter().flatten().map(|t| t.scenic_score).max().unwrap();
+    let res1 = grid.iter().filter(|t| t.visible).count();
+    let res2 = grid.iter().map(|t| t.scenic_score).max().unwrap();
 
     (res1, res2)
 }

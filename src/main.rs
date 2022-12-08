@@ -11,6 +11,7 @@ mod day4;
 mod day5;
 mod day6;
 mod day7;
+mod day8;
 
 fn main() {
     let mut state = State::new();
@@ -21,6 +22,7 @@ fn main() {
     state.run_day(&day5::run, "input/day5.txt");
     state.run_day(&day6::run, "input/day6.txt");
     state.run_day(&day7::run, "input/day7.txt");
+    state.run_day(&day8::run, "input/day8.txt");
 
     state.print();
 }

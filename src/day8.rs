@@ -21,16 +21,15 @@ impl Skyline {
     }
 
     #[inline]
-    fn step(&mut self, tree: &mut Tree) {
+    fn step(&mut self, idx: u32, tree: &mut Tree) {
         if tree.height > self.height {
             tree.visible = true;
             self.height = tree.height;
         }
-        tree.scenic_score *= self.distances[tree.height as usize];
+        tree.scenic_score *= idx - self.distances[tree.height as usize];
         for dist in self.distances.iter_mut().take(tree.height as usize + 1) {
-            *dist = 0;
+            *dist = idx;
         }
-        self.distances.iter_mut().for_each(|d| *d += 1);
     }
 }
 
@@ -58,10 +57,10 @@ pub fn run(input: &AsciiStr) -> (usize, u32) {
 
     for i in 0..width {
         for j in 0..width {
-            skyline_t.step(&mut grid[j * width + i]);
-            skyline_l.step(&mut grid[i * width + j]);
-            skyline_b.step(&mut grid[(width - j - 1) * width + i]);
-            skyline_r.step(&mut grid[i * width + (width - 1 - j)]);
+            skyline_t.step(j as u32, &mut grid[j * width + i]);
+            skyline_l.step(j as u32, &mut grid[i * width + j]);
+            skyline_b.step(j as u32, &mut grid[(width - j - 1) * width + i]);
+            skyline_r.step(j as u32, &mut grid[i * width + (width - 1 - j)]);
         }
         skyline_t = Skyline::new();
         skyline_b = Skyline::new();

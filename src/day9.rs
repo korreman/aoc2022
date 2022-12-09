@@ -1,17 +1,14 @@
 use ascii::{AsciiChar, AsciiStr};
 
 pub fn run(input: &AsciiStr) -> (usize, usize) {
-    let (mut rope1, mut rope2) = ([(0, 0); 2], [(0, 0); 10]);
+    let mut rope = [(0, 0); 10];
     let (mut trail1, mut trail2) = (vec![(0, 0)], vec![(0, 0)]);
     for line in input.trim_end().split(AsciiChar::LineFeed) {
         let steps = line[2..].as_str().parse::<u32>().unwrap();
         for _ in 0..steps {
-            if step_rope(&mut rope1, line[0]) {
-                trail1.push(*rope1.last().unwrap());
-            }
-            if step_rope(&mut rope2, line[0]) {
-                trail2.push(*rope2.last().unwrap());
-            }
+            let moved_length = step_rope(&mut rope, line[0]);
+            if moved_length > 1 { trail1.push(rope[1]); }
+            if moved_length > 9 { trail2.push(rope[9]); }
         }
     }
     // We transmute the (i16, i16) elements to u32 instead,
@@ -21,7 +18,7 @@ pub fn run(input: &AsciiStr) -> (usize, usize) {
     (count_unique(trail1), count_unique(trail2))
 }
 
-fn step_rope(rope: &mut [(i16, i16)], dir: AsciiChar) -> bool {
+fn step_rope(rope: &mut [(i16, i16)], dir: AsciiChar) -> u8 {
     match dir {
         AsciiChar::U => rope[0].1 += 1,
         AsciiChar::D => rope[0].1 -= 1,
@@ -38,10 +35,10 @@ fn step_rope(rope: &mut [(i16, i16)], dir: AsciiChar) -> bool {
             curr.0 += x_delta.signum();
             curr.1 += y_delta.signum();
         } else {
-            return false;
+            return i as u8;
         }
     }
-    return true;
+    return rope.len() as u8;
 }
 
 fn count_unique<T: Copy + Default + Ord>(mut data: Vec<T>) -> usize {

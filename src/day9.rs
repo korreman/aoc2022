@@ -17,7 +17,7 @@ pub fn run(input: &AsciiStr) -> (usize, usize) {
     (count_unique(trail1), count_unique(trail2))
 }
 
-fn step_rope(rope: &mut [(i32, i32)], dir: AsciiChar) -> bool {
+fn step_rope(rope: &mut [(i16, i16)], dir: AsciiChar) -> bool {
     match dir {
         AsciiChar::U => rope[0].1 += 1,
         AsciiChar::D => rope[0].1 -= 1,

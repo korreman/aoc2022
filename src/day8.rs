@@ -1,21 +1,21 @@
 use ascii::AsciiStr;
 
 struct Tree {
-    height: i8,
+    height: u8,
     visible: bool,
     scenic_score: u32,
 }
 
 struct Skyline {
-    height: i8,
+    height: u8,
     distances: [u32; 10],
 }
 
 impl Skyline {
     #[inline]
-    fn new() -> Self {
+    fn new(tree: &mut Tree) -> Self {
         Self {
-            height: -1,
+            height: tree.height,
             distances: [0; 10],
         }
     }
@@ -26,7 +26,7 @@ impl Skyline {
             tree.visible = true;
             self.height = tree.height;
         }
-        tree.scenic_score *= idx - self.distances[tree.height as usize];
+        tree.scenic_score *= idx - unsafe { self.distances.get_unchecked(tree.height as usize) };
         for dist in self.distances.iter_mut().take(tree.height as usize + 1) {
             *dist = idx;
         }
@@ -40,8 +40,7 @@ pub fn run(input: &AsciiStr) -> (usize, u32) {
         .lines()
         .flatten()
         .map(|digit| {
-            let height = (digit.as_byte() - b'0') as i8;
-            assert!(height >= 0, "{height}"); // Why does this improve performance???
+            let height = digit.as_byte() - b'0';
             Tree {
                 height,
                 visible: false,
@@ -50,25 +49,21 @@ pub fn run(input: &AsciiStr) -> (usize, u32) {
         })
         .collect();
 
-    let mut skyline_t = Skyline::new(); // From top
-    let mut skyline_b = Skyline::new(); // From bottom
-    let mut skyline_l = Skyline::new(); // From left
-    let mut skyline_r = Skyline::new(); // From right
 
-    for i in 0..width {
-        for j in 0..width {
-            skyline_t.step(j as u32, &mut grid[j * width + i]);
-            skyline_l.step(j as u32, &mut grid[i * width + j]);
-            skyline_b.step(j as u32, &mut grid[(width - j - 1) * width + i]);
-            skyline_r.step(j as u32, &mut grid[i * width + (width - 1 - j)]);
+    for i in 1..width - 1 {
+        let mut skyline_t = Skyline::new(&mut grid[i]); // From top
+        let mut skyline_b = Skyline::new(&mut grid[(width - 1) * width + i]); // From bottom
+        let mut skyline_l = Skyline::new(&mut grid[i * width]); // From left
+        let mut skyline_r = Skyline::new(&mut grid[i * width + width - 1]); // From right
+        for j in 1..width {
+            skyline_t.step(j as u32, unsafe {grid.get_unchecked_mut(j * width + i)});
+            skyline_l.step(j as u32, unsafe {grid.get_unchecked_mut(i * width + j)});
+            skyline_b.step(j as u32, unsafe {grid.get_unchecked_mut((width - j - 1) * width + i)});
+            skyline_r.step(j as u32, unsafe {grid.get_unchecked_mut(i * width + (width - 1 - j))});
         }
-        skyline_t = Skyline::new();
-        skyline_b = Skyline::new();
-        skyline_l = Skyline::new();
-        skyline_r = Skyline::new();
     }
 
-    let res1 = grid.iter().filter(|t| t.visible).count();
+    let res1 = grid.iter().filter(|t| t.visible).count() + 4 * width - 4;
     let res2 = grid.iter().map(|t| t.scenic_score).max().unwrap();
 
     (res1, res2)

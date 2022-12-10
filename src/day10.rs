@@ -1,0 +1,189 @@
+use ascii::AsciiStr;
+
+pub fn run(input: &AsciiStr) -> (i32, usize) {
+    let mut clock = 0i32;
+    let mut reg_x: i32 = 1;
+    let mut res1 = 0;
+    let mut res2 = [false; 240];
+    for element in input.as_str().split_ascii_whitespace() {
+        if reg_x.abs_diff(clock % 40) <= 1 {
+            res2[clock as usize] = true;
+        }
+        clock += 1;
+        if clock % 40 == 20 {
+            res1 += reg_x * clock;
+        }
+        if let Ok(v) = element.parse::<i32>() {
+            reg_x += v;
+        }
+    }
+
+    println!("Day 10, part 2:");
+    for y in 0..6 {
+        for x in 0..40 {
+            let c = if res2[x + y * 40] { '█' } else { '░' };
+            print!("{c}");
+        }
+        println!();
+    }
+
+    (res1, 0)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn test() {
+        let input = "\
+            addx 15
+            addx -11
+            addx 6
+            addx -3
+            addx 5
+            addx -1
+            addx -8
+            addx 13
+            addx 4
+            noop
+            addx -1
+            addx 5
+            addx -1
+            addx 5
+            addx -1
+            addx 5
+            addx -1
+            addx 5
+            addx -1
+            addx -35
+            addx 1
+            addx 24
+            addx -19
+            addx 1
+            addx 16
+            addx -11
+            noop
+            noop
+            addx 21
+            addx -15
+            noop
+            noop
+            addx -3
+            addx 9
+            addx 1
+            addx -3
+            addx 8
+            addx 1
+            addx 5
+            noop
+            noop
+            noop
+            noop
+            noop
+            addx -36
+            noop
+            addx 1
+            addx 7
+            noop
+            noop
+            noop
+            addx 2
+            addx 6
+            noop
+            noop
+            noop
+            noop
+            noop
+            addx 1
+            noop
+            noop
+            addx 7
+            addx 1
+            noop
+            addx -13
+            addx 13
+            addx 7
+            noop
+            addx 1
+            addx -33
+            noop
+            noop
+            noop
+            addx 2
+            noop
+            noop
+            noop
+            addx 8
+            noop
+            addx -1
+            addx 2
+            addx 1
+            noop
+            addx 17
+            addx -9
+            addx 1
+            addx 1
+            addx -3
+            addx 11
+            noop
+            noop
+            addx 1
+            noop
+            addx 1
+            noop
+            noop
+            addx -13
+            addx -19
+            addx 1
+            addx 3
+            addx 26
+            addx -30
+            addx 12
+            addx -1
+            addx 3
+            addx 1
+            noop
+            noop
+            noop
+            addx -9
+            addx 18
+            addx 1
+            addx 2
+            noop
+            noop
+            addx 9
+            noop
+            noop
+            noop
+            addx -1
+            addx 2
+            addx -37
+            addx 1
+            addx 3
+            noop
+            addx 15
+            addx -21
+            addx 22
+            addx -6
+            addx 1
+            noop
+            addx 2
+            addx 1
+            noop
+            addx -10
+            noop
+            noop
+            addx 20
+            addx 1
+            addx 2
+            addx 2
+            addx -6
+            addx -11
+            noop
+            noop
+            noop";
+        let (res1, _) = run(AsciiStr::from_ascii(input).unwrap());
+        assert_eq!(res1, 13140);
+        assert!(false);
+    }
+}

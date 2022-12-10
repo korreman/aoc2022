@@ -23,11 +23,8 @@ pub fn run(input: &AsciiStr) -> (i32, Res2) {
         // Virtual machine
         if input[idx] == b'a' {
             tick(reg_x);
-            // 1. Jump to space.
-            while input[idx] != b' ' {
-                idx += 1;
-            }
-            idx += 1;
+            // 1. Jump to number.
+            idx += 5;
             // 2. Check for '-' sign.
             let sign: i32 = if input[idx] == b'-' {
                 idx += 1;
@@ -42,17 +39,14 @@ pub fn run(input: &AsciiStr) -> (i32, Res2) {
                 v += (input[idx] - b'0') as i32;
                 idx += 1;
             }
+            idx += 1;
             v *= sign;
             // 4. Add or subtract v from reg_x.
             reg_x += v;
+        } else {
+            idx += 5;
         }
-
-        while idx < input.len() && input[idx] != b'\n' {
-            idx += 1;
-        }
-        idx += 1;
     }
-
     (res1, res2)
 }
 

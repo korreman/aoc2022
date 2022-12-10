@@ -2,23 +2,17 @@ use ascii::AsciiStr;
 use std::fmt::{Debug, Display, Write};
 
 pub fn run(input: &AsciiStr) -> (i32, Res2) {
-    let mut clock = 0i32;
-    let mut reg_x: i32 = 1;
-    let mut res1 = 0;
-    let mut res2 = [false; 240];
-    for element in input.as_str().split_ascii_whitespace() {
-        if reg_x.abs_diff(clock % 40) <= 1 {
-            res2[clock as usize] = true;
+    let mut reg_x = 1i32;
+    let (mut res1, mut res2) = (0i32, [false; 240]);
+    for (clock, element) in input.as_str().split_ascii_whitespace().enumerate() {
+        if (clock + 1) % 40 == 20 {
+            res1 += reg_x * (clock + 1) as i32;
         }
-        clock += 1;
-        if clock % 40 == 20 {
-            res1 += reg_x * clock;
+        if reg_x.abs_diff(clock as i32 % 40) <= 1 {
+            res2[clock] = true;
         }
-        if let Ok(v) = element.parse::<i32>() {
-            reg_x += v;
-        }
+        reg_x += element.parse::<i32>().unwrap_or(0);
     }
-
     (res1, Res2 { data: res2 })
 }
 

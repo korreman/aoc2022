@@ -26,9 +26,10 @@ fn main() {
     state.run_day(&day7::run, "input/day7.txt");
     state.run_day(&day8::run, "input/day8.txt");
     state.run_day(&day9::run, "input/day9.txt");
-    state.run_day(&day10::run, "input/day10.txt");
+    let (_, day10part2) = state.run_day(&day10::run, "input/day10.txt");
 
     state.print();
+    println!("{day10part2:?}");
 }
 
 struct State {
@@ -53,7 +54,7 @@ impl State {
         &mut self,
         task: &dyn Fn(&AsciiStr) -> (A1, A2),
         input_path: &str,
-    ) {
+    ) -> (A1, A2) {
         let input = std::fs::read_to_string(input_path).unwrap();
         let input = AsciiStr::from_ascii(input.as_bytes()).unwrap();
 
@@ -70,6 +71,8 @@ impl State {
         ]);
         self.total += delta;
         self.day_counter += 1;
+
+        (res1, res2)
     }
 
     fn print(mut self) {

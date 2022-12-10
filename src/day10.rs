@@ -3,18 +3,18 @@ use std::fmt::{Debug, Display, Write};
 
 pub fn run(input: &AsciiStr) -> (i32, Res2) {
     let input = input.as_bytes();
-    let mut clock: i32 = 0;
+    let mut clock: u16 = 0;
     let mut reg_x: i32 = 1;
-    let (mut res1, mut res2) = (0i32, [false; 240]);
+    let (mut res1, mut res2) = (0i32, Res2::new());
     let mut idx = 0;
 
     let mut tick = |x: i32| {
-        if x.abs_diff(clock % 40) <= 1 {
-            res2[clock as usize] = true;
+        if x.abs_diff(clock as i32 % 40) <= 1 {
+            res2.blit(clock);
         }
         clock += 1;
         if clock % 40 == 20 {
-            res1 += x * clock;
+            res1 += x * clock as i32;
         }
         clock < 240
     };
@@ -53,72 +53,85 @@ pub fn run(input: &AsciiStr) -> (i32, Res2) {
         idx += 1;
     }
 
-    (res1, Res2 { data: res2 })
+    (res1, res2)
 }
 
-pub fn run_flat(input: &AsciiStr) -> (i32, Res2) {
-    let (mut res1, mut res2) = (0i32, [false; 240]);
+//pub fn run_flat(input: &AsciiStr) -> (i32, Res2) {
+//    let (mut res1, mut res2) = (0i32, [false; 240]);
+//
+//    let mut v = 0i32;
+//    let mut reg_x = 1i32;
+//    let mut neg = false;
+//    let mut parse = false;
+//    let mut clock = 0i32;
+//
+//    let mut tick = |x: i32| {
+//        if x.abs_diff(clock % 40) <= 1 {
+//            res2[clock as usize] = true;
+//        }
+//        clock += 1;
+//        if clock % 40 == 20 {
+//            res1 += x * clock;
+//        }
+//    };
+//
+//    for byte in input.as_bytes().iter() {
+//        match byte {
+//            b'\n' => {
+//                parse = false;
+//                tick(reg_x);
+//                if neg {
+//                    v = -v;
+//                    neg = false;
+//                }
+//                reg_x += v;
+//                v = 0;
+//            }
+//            b' ' => {
+//                parse = true;
+//                tick(reg_x)
+//            }
+//            b if parse => {
+//                v *= 10;
+//                v += (b - b'0') as i32;
+//            }
+//            _ => (),
+//        }
+//    }
+//    (res1, Res2 { data: res2 })
+//}
 
-    let mut v = 0i32;
-    let mut reg_x = 1i32;
-    let mut neg = false;
-    let mut parse = false;
-    let mut clock = 0i32;
-
-    let mut tick = |x: i32| {
-        if x.abs_diff(clock % 40) <= 1 {
-            res2[clock as usize] = true;
-        }
-        clock += 1;
-        if clock % 40 == 20 {
-            res1 += x * clock;
-        }
-    };
-
-    for byte in input.as_bytes().iter() {
-        match byte {
-            b'\n' => {
-                parse = false;
-                tick(reg_x);
-                if neg {
-                    v = -v;
-                    neg = false;
-                }
-                reg_x += v;
-                v = 0;
-            }
-            b' ' => {
-                parse = true;
-                tick(reg_x)
-            }
-            b if parse => {
-                v *= 10;
-                v += (b - b'0') as i32;
-            }
-            _ => (),
-        }
-    }
-    (res1, Res2 { data: res2 })
-}
-
-pub fn run_simple(input: &AsciiStr) -> (i32, Res2) {
-    let mut reg_x = 1i32;
-    let (mut res1, mut res2) = (0i32, [false; 240]);
-    for (clock, element) in input.as_str().split_ascii_whitespace().enumerate() {
-        // Result gathering
-        if reg_x.abs_diff(clock as i32 % 40) <= 1 {
-            res2[clock] = true;
-        }
-        if (clock + 1) % 40 == 20 {
-            res1 += reg_x * (clock + 1) as i32;
-        }
-        reg_x += element.parse::<i32>().unwrap_or(0);
-    }
-    (res1, Res2 { data: res2 })
-}
+//pub fn run_simple(input: &AsciiStr) -> (i32, Res2) {
+//    let mut reg_x = 1i32;
+//    let (mut res1, mut res2) = (0i32, [false; 240]);
+//    for (clock, element) in input.as_str().split_ascii_whitespace().enumerate() {
+//        // Result gathering
+//        if reg_x.abs_diff(clock as i32 % 40) <= 1 {
+//            res2[clock] = true;
+//        }
+//        if (clock + 1) % 40 == 20 {
+//            res1 += reg_x * (clock + 1) as i32;
+//        }
+//        reg_x += element.parse::<i32>().unwrap_or(0);
+//    }
+//    (res1, Res2 { data: res2 })
+//}
 
 pub struct Res2 {
-    data: [bool; 240],
+    data: [u32; 8],
+}
+
+impl Res2 {
+    fn new() -> Self {
+        Self {
+            data: [0; 8],
+        }
+    }
+
+    #[inline]
+    fn blit(&mut self, idx: u16) {
+        self.data[(idx >> 5) as usize] |= 1 << (idx & 0x1F);
+    }
 }
 
 impl Display for Res2 {
@@ -132,7 +145,9 @@ impl Debug for Res2 {
         f.write_str("Day 10, part 2:\n")?;
         for y in 0..6 {
             for x in 0..40 {
-                let c = if self.data[x + y * 40] { '█' } else { '░' };
+                let idx = x + y * 40;
+                let bit = self.data[idx >> 5] & (1 << (idx & 0x1F)) != 0;
+                let c = if bit { '█' } else { '░' };
                 f.write_char(c)?;
             }
             f.write_char('\n')?;

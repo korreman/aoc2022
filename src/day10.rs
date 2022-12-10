@@ -56,51 +56,6 @@ pub fn run(input: &AsciiStr) -> (i32, Res2) {
     (res1, res2)
 }
 
-//pub fn run_flat(input: &AsciiStr) -> (i32, Res2) {
-//    let (mut res1, mut res2) = (0i32, [false; 240]);
-//
-//    let mut v = 0i32;
-//    let mut reg_x = 1i32;
-//    let mut neg = false;
-//    let mut parse = false;
-//    let mut clock = 0i32;
-//
-//    let mut tick = |x: i32| {
-//        if x.abs_diff(clock % 40) <= 1 {
-//            res2[clock as usize] = true;
-//        }
-//        clock += 1;
-//        if clock % 40 == 20 {
-//            res1 += x * clock;
-//        }
-//    };
-//
-//    for byte in input.as_bytes().iter() {
-//        match byte {
-//            b'\n' => {
-//                parse = false;
-//                tick(reg_x);
-//                if neg {
-//                    v = -v;
-//                    neg = false;
-//                }
-//                reg_x += v;
-//                v = 0;
-//            }
-//            b' ' => {
-//                parse = true;
-//                tick(reg_x)
-//            }
-//            b if parse => {
-//                v *= 10;
-//                v += (b - b'0') as i32;
-//            }
-//            _ => (),
-//        }
-//    }
-//    (res1, Res2 { data: res2 })
-//}
-
 //pub fn run_simple(input: &AsciiStr) -> (i32, Res2) {
 //    let mut reg_x = 1i32;
 //    let (mut res1, mut res2) = (0i32, [false; 240]);

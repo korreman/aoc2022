@@ -1,6 +1,7 @@
 use ascii::AsciiStr;
+use std::fmt::{Debug, Display, Write};
 
-pub fn run(input: &AsciiStr) -> (i32, usize) {
+pub fn run(input: &AsciiStr) -> (i32, Res2) {
     let mut clock = 0i32;
     let mut reg_x: i32 = 1;
     let mut res1 = 0;
@@ -18,16 +19,31 @@ pub fn run(input: &AsciiStr) -> (i32, usize) {
         }
     }
 
-    println!("Day 10, part 2:");
-    for y in 0..6 {
-        for x in 0..40 {
-            let c = if res2[x + y * 40] { '█' } else { '░' };
-            print!("{c}");
-        }
-        println!();
-    }
+    (res1, Res2 { data: res2 })
+}
 
-    (res1, 0)
+pub struct Res2 {
+    data: [bool; 240],
+}
+
+impl Display for Res2 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("see below")
+    }
+}
+
+impl Debug for Res2 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Day 10, part 2:\n")?;
+        for y in 0..6 {
+            for x in 0..40 {
+                let c = if self.data[x + y * 40] { '█' } else { '░' };
+                f.write_char(c)?;
+            }
+            f.write_char('\n')?;
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -184,6 +200,5 @@ mod test {
             noop";
         let (res1, _) = run(AsciiStr::from_ascii(input).unwrap());
         assert_eq!(res1, 13140);
-        assert!(false);
     }
 }

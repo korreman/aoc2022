@@ -1,7 +1,7 @@
 use ascii::AsciiStr;
 use std::fmt::{Debug, Display, Write};
 
-pub fn run(input: &AsciiStr) -> (i32, Res2) {
+pub fn _run_nested(input: &AsciiStr) -> (i32, Res2) {
     let input = input.as_bytes();
     let mut clock: i32 = 0;
     let mut reg_x: i32 = 1;
@@ -56,15 +56,9 @@ pub fn run(input: &AsciiStr) -> (i32, Res2) {
     (res1, Res2 { data: res2 })
 }
 
-pub fn run_flat(input: &AsciiStr) -> (i32, Res2) {
-    let (mut res1, mut res2) = (0i32, [false; 240]);
-
-    let mut v = 0i32;
-    let mut reg_x = 1i32;
-    let mut neg = false;
-    let mut parse = false;
+pub fn run(input: &AsciiStr) -> (i32, Res2) {
     let mut clock = 0i32;
-
+    let (mut res1, mut res2) = (0i32, [false; 240]);
     let mut tick = |x: i32| {
         if x.abs_diff(clock % 40) <= 1 {
             res2[clock as usize] = true;
@@ -75,9 +69,11 @@ pub fn run_flat(input: &AsciiStr) -> (i32, Res2) {
         }
     };
 
-    for byte in input.as_bytes().iter() {
-        match byte {
-            b'\n' => {
+    let (mut v, mut reg_x) = (0i32, 1i32);
+    let (mut neg, mut parse) = (false, false);
+    for &byte in input.as_bytes().iter() {
+        if parse {
+            if byte == b'\n' {
                 parse = false;
                 tick(reg_x);
                 if neg {
@@ -86,16 +82,13 @@ pub fn run_flat(input: &AsciiStr) -> (i32, Res2) {
                 }
                 reg_x += v;
                 v = 0;
-            }
-            b' ' => {
-                parse = true;
-                tick(reg_x)
-            }
-            b if parse => {
+            } else {
                 v *= 10;
-                v += (b - b'0') as i32;
+                v += (byte - b'0') as i32;
             }
-            _ => (),
+        } else if byte == b' ' {
+            parse = true;
+            tick(reg_x);
         }
     }
     (res1, Res2 { data: res2 })

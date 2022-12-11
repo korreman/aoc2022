@@ -1,7 +1,6 @@
 use ascii::AsciiStr;
 use std::fmt::{Debug, Display, Write};
 
-#[inline]
 pub fn run(input: &AsciiStr) -> (i32, Res2) {
     let input = input.as_bytes();
 

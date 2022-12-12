@@ -188,3 +188,73 @@ impl Iterator for Neighbors {
         }
     }
 }
+
+#[derive(Clone)]
+pub struct BitGrid {
+    data: Vec<u32>,
+    width: usize,
+    height: usize,
+}
+
+impl BitGrid {
+    pub fn new(width: usize, height: usize, init: bool) -> Self {
+        let data: Vec<u32> = (0..(width * height) / 32 + 1)
+            .map(|_| if init { u32::MAX } else { 0 })
+            .collect();
+        Self {
+            data,
+            width,
+            height,
+        }
+    }
+
+    fn get_idxs(&self, p: Pos) -> Option<(usize, u32)> {
+        if p.x < self.width && p.y < self.height {
+            let idx = p.x + p.y * self.width;
+            let chunk_idx = idx >> 5;
+            let bit = 1 << (idx & 0x1F);
+            Some((chunk_idx, bit))
+        } else {
+            None
+        }
+    }
+
+    pub fn get(&self, p: Pos) -> Option<bool> {
+        let (chunk_idx, bit) = self.get_idxs(p)?;
+        Some((self.data[chunk_idx] & bit) != 0)
+    }
+
+    pub fn set(&mut self, p: Pos, value: bool) {
+        if let Some((chunk_idx, bit)) = self.get_idxs(p) {
+            if value {
+                self.data[chunk_idx] |= bit;
+            } else {
+                self.data[chunk_idx] &= !bit;
+            }
+        }
+    }
+
+    pub fn width(&self) -> usize {
+        self.width
+    }
+
+    pub fn height(&self) -> usize {
+        self.height
+    }
+}
+
+impl Display for BitGrid {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for y in 0..self.height {
+            for x in 0..self.width {
+                if self.get(Pos { x, y }).unwrap() {
+                    f.write_char('.')?
+                } else {
+                    f.write_char('#')?
+                }
+            }
+            f.write_char('\n')?;
+        }
+        Ok(())
+    }
+}

@@ -1,10 +1,4 @@
-use std::{cmp::Reverse, collections::BinaryHeap};
-
-use crate::util::{
-    grid::{Grid, Pos},
-    pathfinding::{a_star, dijkstra},
-    queue::{KVPair, RadixHeap, SlidingBucketQueue},
-};
+use crate::util::grid::{Grid, Pos};
 use ascii::AsciiStr;
 
 pub fn run(input: &AsciiStr) -> (usize, usize) {
@@ -18,19 +12,32 @@ pub fn run(input: &AsciiStr) -> (usize, usize) {
         c => c as u8 - b'a',
     });
 
-    type Queue = RadixHeap<Pos>;
-    let cost = |a, b| {
-        if grid[a] as i16 - grid[b] as i16 <= 1 {
-            Some(1)
-        } else {
-            None
+    return bfs(&grid, start, end).unwrap();
+}
+
+pub fn bfs(grid: &Grid<u8>, start: Pos, end: Pos) -> Option<(usize, usize)> {
+    let mut visited = Grid::new_filled(grid.width(), grid.height(), false);
+    let mut positions = vec![end];
+    let mut step = 0;
+    let mut res2 = 0;
+    while !positions.is_empty() {
+        for position in std::mem::take(&mut positions) {
+            if grid[position] == 0 && res2 == 0 {
+                res2 = step;
+            }
+            if position == start {
+                return Some((step, res2));
+            }
+            for neighbor in grid.neighbors(position) {
+                if grid[position] as i16 - grid[neighbor] as i16 <= 1 && !visited[neighbor] {
+                    visited[neighbor] = true;
+                    positions.push(neighbor);
+                }
+            }
         }
-    };
-    let res1 = a_star::<Queue, _, _, _, _>(&grid, end, cost, |p| p.dist(&end), |pos| pos == start);
-
-    let res2 = a_star::<Queue, _, _, _, _>(&grid, end, cost, |p| p.x, |p| grid[p] == 0);
-
-    (res1.unwrap(), res2.unwrap())
+        step += 1;
+    }
+    None
 }
 
 #[cfg(test)]

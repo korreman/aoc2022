@@ -1,6 +1,6 @@
 use crate::util::{
-    pathfinding::Dijkstra,
     grid::{Grid, Pos},
+    pathfinding::dijkstra,
 };
 use ascii::AsciiStr;
 
@@ -18,41 +18,36 @@ pub fn run(input: &AsciiStr) -> (usize, usize) {
         }
         c => c as u8 - b'a',
     });
-    let mut dijkstra1 = Dijkstra::new(&grid, 2, start);
-    let res1 = dijkstra1
-        .run(
-            |a, b| {
-                if *b as i16 - *a as i16 <= 1 {
-                    Some(1)
-                } else {
-                    None
-                }
-            },
-            |pos| pos == end,
-        )
-        .unwrap();
+    let res1 = dijkstra(
+        &grid,
+        2,
+        start,
+        |a, b| {
+            if *b as i16 - *a as i16 <= 1 {
+                Some(1)
+            } else {
+                None
+            }
+        },
+        |pos| pos == end,
+    )
+    .unwrap();
 
-    let mut dijkstra2 = Dijkstra::new(&grid, 2, end);
-    let res2 = dijkstra2
-        .run(
-            |a, b| {
-                if *a as i16 - *b as i16 <= 1 {
-                    Some(1)
-                } else {
-                    None
-                }
-            },
-            |p| grid[p] == 0,
-        )
-        .unwrap();
+    let res2 = dijkstra(
+        &grid,
+        2,
+        end,
+        |a, b| {
+            if *a as i16 - *b as i16 <= 1 {
+                Some(1)
+            } else {
+                None
+            }
+        },
+        |p| grid[p] == 0,
+    )
+    .unwrap();
 
-    //let mut res2 = usize::MAX;
-    //let mut costs = dijkstra2.to_costs();
-    //costs.for_each(|pos, cost| {
-    //if grid[pos] == 0 {
-    //res2 = res2.min(*cost)
-    //}
-    //});
     (res1, res2)
 }
 

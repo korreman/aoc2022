@@ -4,6 +4,8 @@ use std::time::{Duration, Instant};
 use ascii::AsciiStr;
 use comfy_table::{presets::UTF8_FULL_CONDENSED, Cell, CellAlignment, Table};
 
+pub mod util;
+
 mod day1;
 mod day2;
 mod day3;
@@ -15,6 +17,7 @@ mod day8;
 mod day9;
 mod day10;
 mod day11;
+mod day12;
 
 fn main() {
     let mut state = State::new();
@@ -29,6 +32,7 @@ fn main() {
     state.run_day(&day9::run, "input/day9.txt");
     let (_, day10part2) = state.run_day(&day10::run, "input/day10.txt");
     state.run_day(&day11::run, "input/day11.txt");
+    state.run_day(&day12::run, "input/day12.txt");
 
     state.print();
     println!("{day10part2:?}");

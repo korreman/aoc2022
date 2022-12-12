@@ -1,6 +1,7 @@
 use crate::util::{
     grid::{Grid, Pos},
     pathfinding::dijkstra,
+    queue::SlidingBucketQueue,
 };
 use ascii::AsciiStr;
 
@@ -18,12 +19,11 @@ pub fn run(input: &AsciiStr) -> (usize, usize) {
         }
         c => c as u8 - b'a',
     });
-    let res1 = dijkstra(
+    let res1 = dijkstra::<SlidingBucketQueue<2, Pos>, _, _, _>(
         &grid,
-        2,
         start,
         |a, b| {
-            if *b as i16 - *a as i16 <= 1 {
+            if grid[b] as i16 - grid[a] as i16 <= 1 {
                 Some(1)
             } else {
                 None
@@ -33,12 +33,11 @@ pub fn run(input: &AsciiStr) -> (usize, usize) {
     )
     .unwrap();
 
-    let res2 = dijkstra(
+    let res2 = dijkstra::<SlidingBucketQueue<2, Pos>, _, _, _>(
         &grid,
-        2,
         end,
         |a, b| {
-            if *a as i16 - *b as i16 <= 1 {
+            if grid[a] as i16 - grid[b] as i16 <= 1 {
                 Some(1)
             } else {
                 None

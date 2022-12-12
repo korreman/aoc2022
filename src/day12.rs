@@ -1,25 +1,25 @@
+use std::{cmp::Reverse, collections::BinaryHeap};
+
 use crate::util::{
     grid::{Grid, Pos},
-    pathfinding::dijkstra,
-    queue::SlidingBucketQueue,
+    pathfinding::{a_star, dijkstra},
+    queue::{KVPair, SlidingBucketQueue},
 };
 use ascii::AsciiStr;
 
 pub fn run(input: &AsciiStr) -> (usize, usize) {
     let mut start = Pos::ZERO;
     let mut end = Pos::ZERO;
+
+    #[rustfmt::skip]
     let grid = Grid::parse(input.as_str(), |p, c| match c {
-        'S' => {
-            start = p;
-            0
-        }
-        'E' => {
-            end = p;
-            25
-        }
+        'S' => { start = p; 0 }
+        'E' => { end = p; 25 }
         c => c as u8 - b'a',
     });
-    let res1 = dijkstra::<SlidingBucketQueue<2, Pos>, _, _, _>(
+
+    type Queue1 = BinaryHeap<Reverse<KVPair<usize, Pos>>>;
+    let res1 = a_star::<Queue1, _, _, _, _>(
         &grid,
         start,
         |a, b| {
@@ -29,9 +29,10 @@ pub fn run(input: &AsciiStr) -> (usize, usize) {
                 None
             }
         },
+        |p| p.dist(&end),
         |pos| pos == end,
     )
-    .unwrap();
+    .unwrap_or(0);
 
     let res2 = dijkstra::<SlidingBucketQueue<2, Pos>, _, _, _>(
         &grid,
@@ -59,8 +60,7 @@ mod tests {
     #[test]
     fn test() {
         let input = "Sabqponm\nabcryxxl\naccszExk\nacctuvwj\nabdefghi\n";
-        let (res1, res2) = run(AsciiStr::from_ascii(input).unwrap());
-        assert_eq!(res1, 31);
-        assert_eq!(res2, 29);
+        let res = run(AsciiStr::from_ascii(input).unwrap());
+        assert_eq!(res, (31, 29));
     }
 }

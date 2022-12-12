@@ -1,5 +1,5 @@
 use crate::util::{
-    dijkstra::Dijkstra,
+    pathfinding::Dijkstra,
     grid::{Grid, Pos},
 };
 use ascii::AsciiStr;

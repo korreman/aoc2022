@@ -5,8 +5,8 @@ use std::{
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Pos {
-    x: usize,
-    y: usize,
+    pub x: usize,
+    pub y: usize,
 }
 
 impl Pos {

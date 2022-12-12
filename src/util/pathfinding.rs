@@ -42,8 +42,8 @@ where
     None
 }
 
-// problem: currently the priority is compared against the cost
-/// NOTE: The heuristic must be admissible. Google it.
+/// NOTE: The heuristic must be admissible,
+/// ie. follow certain properties that you should look up again this year.
 pub fn a_star<Q: PriorityQueue<usize, Pos>, T, C, H, D>(
     grid: &Grid<T>,
     start: Pos,
@@ -68,7 +68,6 @@ where
             continue;
         }
         if is_target(pos) {
-            costs.for_each(|_, c| if *c == usize::MAX {*c = 0} else {*c = 1});
             return Some(cost);
         }
         for nebo in grid.neighbors(pos) {

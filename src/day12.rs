@@ -33,24 +33,26 @@ pub fn run(input: &AsciiStr) -> (usize, usize) {
         .unwrap();
 
     let mut dijkstra2 = Dijkstra::new(&grid, 2, end);
-    dijkstra2.run(
-        |a, b| {
-            if *a as i16 - *b as i16 <= 1 {
-                Some(1)
-            } else {
-                None
-            }
-        },
-        |_| false,
-    );
+    let res2 = dijkstra2
+        .run(
+            |a, b| {
+                if *a as i16 - *b as i16 <= 1 {
+                    Some(1)
+                } else {
+                    None
+                }
+            },
+            |p| grid[p] == 0,
+        )
+        .unwrap();
 
-    let mut res2 = usize::MAX;
-    let mut costs = dijkstra2.to_costs();
-    costs.for_each(|pos, cost| {
-        if grid[pos] == 0 {
-            res2 = res2.min(*cost)
-        }
-    });
+    //let mut res2 = usize::MAX;
+    //let mut costs = dijkstra2.to_costs();
+    //costs.for_each(|pos, cost| {
+    //if grid[pos] == 0 {
+    //res2 = res2.min(*cost)
+    //}
+    //});
     (res1, res2)
 }
 

@@ -3,57 +3,41 @@ use super::{
     queue::SlidingBucketQueue,
 };
 
-#[derive(Clone)]
-pub struct Dijkstra<'a, T> {
-    map: &'a Grid<T>,
-    costs: Grid<usize>,
-    queue: SlidingBucketQueue<Pos>,
-}
+pub fn dijkstra<T, C, D>(
+    grid: &Grid<T>,
+    range: usize,
+    start: Pos,
+    cost_func: C,
+    is_target: D,
+) -> Option<usize>
+where
+    C: Fn(&T, &T) -> Option<usize>,
+    D: Fn(Pos) -> bool,
+{
+    let mut costs = Grid::new_filled(grid.width(), grid.height(), usize::MAX);
+    let mut queue = SlidingBucketQueue::new(range);
 
-impl<'a, T> Dijkstra<'a, T> {
-    pub fn new(map: &'a Grid<T>, range: usize, start: Pos) -> Self {
-        let mut costs = Grid::new_filled(map.width(), map.height(), usize::MAX);
-        costs[start] = 0;
+    costs[start] = 0;
+    queue.add(0, start);
 
-        let mut queue = SlidingBucketQueue::new(range);
-        queue.add(0, start);
-        Self { map, costs, queue }
-    }
-
-    pub fn run<C, W>(&mut self, cost_func: C, win: W) -> Option<usize>
-    where
-        C: Fn(&T, &T) -> Option<usize>,
-        W: Fn(Pos) -> bool,
-    {
-        while let Some((cost, pos)) = self.pop() {
-            if win(pos) {
-                return Some(cost);
-            }
-            for neighbor in self.map.neighbors(pos) {
-                let x = &self.map[neighbor];
-                if let Some(new_cost) = cost_func(&self.map[pos], x) {
-                    self.relax(neighbor, cost + new_cost);
+    while let Some((cost, pos)) = queue.next() {
+        if cost < costs[pos] {
+            continue;
+        }
+        if is_target(pos) {
+            return Some(cost);
+        }
+        for nb in grid.neighbors(pos) {
+            let x = &grid[nb];
+            if let Some(move_cost) = cost_func(&grid[pos], x) {
+                // Relax
+                let nb_cost = move_cost + cost;
+                if nb_cost < costs[nb] {
+                    costs[nb] = nb_cost;
+                    assert!(queue.add(nb_cost, nb));
                 }
             }
         }
-        None
     }
-
-    fn relax(&mut self, p: Pos, value: usize) {
-        if let Some(cell) = self.costs.get_mut(p) {
-            if value < *cell {
-                *cell = value;
-                assert!(self.queue.add(value, p));
-            }
-        }
-    }
-
-    fn pop(&mut self) -> Option<(usize, Pos)> {
-        while let Some((cost, pos)) = self.queue.next() {
-            if cost >= self.costs[pos] {
-                return Some((cost, pos));
-            }
-        }
-        None
-    }
+    None
 }

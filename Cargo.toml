@@ -18,5 +18,4 @@ name = "benchmark"
 harness = false
 
 [profile.release]
-lto = true
 strip = true

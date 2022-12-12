@@ -39,10 +39,6 @@ impl<'a, T> Dijkstra<'a, T> {
         None
     }
 
-    pub fn to_costs(self) -> Grid<usize> {
-        self.costs
-    }
-
     fn relax(&mut self, p: Pos, value: usize) {
         if let Some(cell) = self.costs.get_mut(p) {
             if value < *cell {

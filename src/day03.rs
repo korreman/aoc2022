@@ -1,4 +1,3 @@
-use ascii::AsciiStr;
 use itertools::Itertools;
 
 fn priority(c: u8) -> u32 {
@@ -12,7 +11,7 @@ fn priority(c: u8) -> u32 {
     p as u32
 }
 
-pub fn run(input: &AsciiStr) -> (u32, u32) {
+pub fn run(input: &str) -> (u32, u32) {
     let input = input.as_bytes();
 
     let mut a = 0;

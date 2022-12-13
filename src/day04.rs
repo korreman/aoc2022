@@ -1,7 +1,6 @@
-use ascii::AsciiStr;
 use itertools::Itertools;
 
-pub fn run(input: &AsciiStr) -> (u32, u32) {
+pub fn run(input: &str) -> (u32, u32) {
     let mut res1 = 0;
     let mut res2 = 0;
     for line in input

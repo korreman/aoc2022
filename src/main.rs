@@ -1,7 +1,6 @@
 use std::fmt::Display;
 use std::time::{Duration, Instant};
 
-use ascii::AsciiStr;
 use comfy_table::{presets::UTF8_FULL_CONDENSED, Cell, CellAlignment, Table};
 
 pub mod util;
@@ -60,14 +59,13 @@ impl State {
 
     fn run_day<A1: Display, A2: Display>(
         &mut self,
-        task: &dyn Fn(&AsciiStr) -> (A1, A2),
+        task: &dyn Fn(&str) -> (A1, A2),
         input_path: &str,
     ) -> (A1, A2) {
         let input = std::fs::read_to_string(input_path).expect("missing input: {input_path}");
-        let input = AsciiStr::from_ascii(input.as_bytes()).unwrap();
 
         let start = Instant::now();
-        let (res1, res2) = task(input);
+        let (res1, res2) = task(input.as_str());
         let end = Instant::now();
         let delta = end.duration_since(start);
 

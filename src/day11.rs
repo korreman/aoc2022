@@ -1,4 +1,3 @@
-use ascii::AsciiStr;
 use itertools::Itertools;
 
 #[derive(Clone, Debug)]
@@ -56,8 +55,7 @@ struct Monkey {
     neg: usize,
 }
 
-pub fn run(input: &AsciiStr) -> (usize, usize) {
-    let input = input.as_str();
+pub fn run(input: &str) -> (usize, usize) {
     // Not my proudest work...
     let make_monkey = |p: &str| {
         let mut lines = p.lines();
@@ -157,7 +155,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::run;
-    use ascii::AsciiStr;
 
     #[test]
     fn test() {
@@ -189,7 +186,7 @@ Monkey 3:
   Test: divisible by 17
     If true: throw to monkey 0
     If false: throw to monkey 1";
-        let (res1, _) = run(AsciiStr::from_ascii(input).unwrap());
+        let (res1, _) = run(input);
         assert_eq!(res1, 10605);
     }
 }

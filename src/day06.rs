@@ -1,6 +1,4 @@
-use ascii::AsciiStr;
-
-pub fn run(input: &AsciiStr) -> (usize, usize) {
+pub fn run(input: &str) -> (usize, usize) {
     let res1 = task_fast(input, 4);
     let res2 = task_fast(input, 14);
     (res1, res2)
@@ -20,7 +18,7 @@ fn _task(input: &str, length: usize) -> usize {
 }
 
 /// Bitset solution that skips work by jumping past windows that we already know aren't markers.
-fn task_fast(input: &AsciiStr, length: usize) -> usize {
+fn task_fast(input: &str, length: usize) -> usize {
     let input = input.as_bytes();
     let mut i = 0;
     'outer: while i + length < input.len() {

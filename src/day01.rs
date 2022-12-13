@@ -1,7 +1,6 @@
-use ascii::AsciiStr;
-use std::mem::swap;
+//use std::mem::swap;
 
-pub fn run(input: &AsciiStr) -> (u32, u32) {
+pub fn run(input: &str) -> (u32, u32) {
     let mut elf_calories = 0;
     let mut elfs = Vec::new();
     for line in input.lines() {
@@ -9,7 +8,7 @@ pub fn run(input: &AsciiStr) -> (u32, u32) {
             elfs.push(elf_calories);
             elf_calories = 0;
         } else {
-            let calories = line.as_str().parse::<u32>().unwrap();
+            let calories = line.parse::<u32>().unwrap();
             elf_calories += calories;
         }
     }
@@ -21,7 +20,7 @@ pub fn run(input: &AsciiStr) -> (u32, u32) {
     (a, b)
 }
 
-pub fn run_fast(input: &AsciiStr) -> (u32, u32) {
+pub fn run_fast(input: &str) -> (u32, u32) {
     //let mut maxes = [0u32; 3];
     let mut max = 0;
 

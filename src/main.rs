@@ -18,6 +18,7 @@ mod day9;
 mod day10;
 mod day11;
 mod day12;
+mod day13;
 
 fn main() {
     let mut state = State::new();
@@ -33,6 +34,7 @@ fn main() {
     let (_, day10part2) = state.run_day(&day10::run, "input/day10.txt");
     state.run_day(&day11::run, "input/day11.txt");
     state.run_day(&day12::run, "input/day12.txt");
+    state.run_day(&day13::run, "input/day13.txt");
 
     state.print();
     println!("{day10part2:?}");

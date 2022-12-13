@@ -6,15 +6,15 @@ use comfy_table::{presets::UTF8_FULL_CONDENSED, Cell, CellAlignment, Table};
 
 pub mod util;
 
-mod day1;
-mod day2;
-mod day3;
-mod day4;
-mod day5;
-mod day6;
-mod day7;
-mod day8;
-mod day9;
+mod day01;
+mod day02;
+mod day03;
+mod day04;
+mod day05;
+mod day06;
+mod day07;
+mod day08;
+mod day09;
 mod day10;
 mod day11;
 mod day12;
@@ -22,15 +22,15 @@ mod day13;
 
 fn main() {
     let mut state = State::new();
-    state.run_day(&day1::run, "input/day1.txt");
-    state.run_day(&day2::run, "input/day2.txt");
-    state.run_day(&day3::run, "input/day3.txt");
-    state.run_day(&day4::run, "input/day4.txt");
-    state.run_day(&day5::run, "input/day5.txt");
-    state.run_day(&day6::run, "input/day6.txt");
-    state.run_day(&day7::run, "input/day7.txt");
-    state.run_day(&day8::run, "input/day8.txt");
-    state.run_day(&day9::run, "input/day9.txt");
+    state.run_day(&day01::run, "input/day01.txt");
+    state.run_day(&day02::run, "input/day02.txt");
+    state.run_day(&day03::run, "input/day03.txt");
+    state.run_day(&day04::run, "input/day04.txt");
+    state.run_day(&day05::run, "input/day05.txt");
+    state.run_day(&day06::run, "input/day06.txt");
+    state.run_day(&day07::run, "input/day07.txt");
+    state.run_day(&day08::run, "input/day08.txt");
+    state.run_day(&day09::run, "input/day09.txt");
     let (_, day10part2) = state.run_day(&day10::run, "input/day10.txt");
     state.run_day(&day11::run, "input/day11.txt");
     state.run_day(&day12::run, "input/day12.txt");
@@ -63,7 +63,7 @@ impl State {
         task: &dyn Fn(&AsciiStr) -> (A1, A2),
         input_path: &str,
     ) -> (A1, A2) {
-        let input = std::fs::read_to_string(input_path).unwrap();
+        let input = std::fs::read_to_string(input_path).expect("missing input: {input_path}");
         let input = AsciiStr::from_ascii(input.as_bytes()).unwrap();
 
         let start = Instant::now();

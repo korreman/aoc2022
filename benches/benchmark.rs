@@ -33,7 +33,7 @@ macro_rules! run_benchmarks {
 
 pub fn criterion_benchmark(c: &mut Criterion) {
     run_benchmarks!(
-        c, day1, day2, day3, day4, day5, day6, day7, day8, day9, day10, day11, day12, day13
+        c, day01, day02, day03, day04, day05, day06, day07, day08, day09, day10, day11, day12, day13
     );
 }
 

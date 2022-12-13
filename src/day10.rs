@@ -1,7 +1,6 @@
-use ascii::AsciiStr;
 use std::fmt::{Debug, Display, Write};
 
-pub fn run(input: &AsciiStr) -> (i32, Res2) {
+pub fn run(input: &str) -> (i32, Res2) {
     let input = input.as_bytes();
 
     let (mut res1, mut res2) = (0i32, Res2::new());
@@ -242,7 +241,7 @@ mod test {
             noop\n\
             noop\n\
             noop";
-        let (res1, _) = run(AsciiStr::from_ascii(input).unwrap());
+        let (res1, _) = run(input);
         assert_eq!(res1, 13140);
     }
 }

@@ -1,6 +1,4 @@
-use ascii::{AsciiChar, AsciiStr};
-
-pub fn run(input: &AsciiStr) -> (u32, u32) {
+pub fn run(input: &str) -> (u32, u32) {
     // Tracks the directory sizes of each parent.
     let mut stack: Vec<u32> = vec![];
     // Records all directory sizes
@@ -24,8 +22,8 @@ pub fn run(input: &AsciiStr) -> (u32, u32) {
                 dir = 0;
             }
             _ => {
-                let word = line.split(AsciiChar::Space).next().unwrap();
-                if let Ok(file_size) = word.as_str().parse::<u32>() {
+                let word = line.split(' ').next().unwrap();
+                if let Ok(file_size) = word.parse::<u32>() {
                     dir += file_size;
                 }
             }

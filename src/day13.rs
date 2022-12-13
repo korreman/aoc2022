@@ -1,10 +1,8 @@
-use ascii::AsciiStr;
 use itertools::Itertools;
 use std::cmp::Ordering;
 
-pub fn run(input: &AsciiStr) -> (usize, usize) {
+pub fn run(input: &str) -> (usize, usize) {
     let mut lists: Vec<List> = input
-        .as_str()
         .lines()
         .filter(|l| !l.is_empty())
         .map(List::parse)
@@ -104,8 +102,6 @@ mod parser {
 
 #[cfg(test)]
 mod tests {
-    use ascii::AsciiStr;
-
     #[test]
     fn test() {
         let input = "\
@@ -132,7 +128,7 @@ mod tests {
             \n\
             [1,[2,[3,[4,[5,6,7]]]],8,9]\n\
             [1,[2,[3,[4,[5,6,0]]]],8,9]";
-        let res = super::run(AsciiStr::from_ascii(input).unwrap());
+        let res = super::run(input);
         assert_eq!(res, (13, 140));
     }
 }

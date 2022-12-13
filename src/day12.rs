@@ -1,12 +1,11 @@
 use crate::util::grid::{Grid, Pos};
-use ascii::AsciiStr;
 
-pub fn run(input: &AsciiStr) -> (usize, usize) {
+pub fn run(input: &str) -> (usize, usize) {
     let mut start = Pos::ZERO;
     let mut end = Pos::ZERO;
 
     #[rustfmt::skip]
-    let grid = Grid::parse(input.as_str(), |p, c| match c {
+    let grid = Grid::parse(input, |p, c| match c {
         'S' => { start = p; 0 }
         'E' => { end = p; 25 }
         c => c as u8 - b'a',
@@ -42,14 +41,12 @@ pub fn bfs(grid: &Grid<u8>, start: Pos, end: Pos) -> Option<(usize, usize)> {
 
 #[cfg(test)]
 mod tests {
-    use ascii::AsciiStr;
-
     use super::run;
 
     #[test]
     fn test() {
         let input = "Sabqponm\nabcryxxl\naccszExk\nacctuvwj\nabdefghi\n";
-        let res = run(AsciiStr::from_ascii(input).unwrap());
+        let res = run(input);
         assert_eq!(res, (31, 29));
     }
 }

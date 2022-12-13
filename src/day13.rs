@@ -5,24 +5,27 @@ pub fn run(input: &AsciiStr) -> (usize, usize) {
     let mut res1 = 0;
     for (idx, line) in input.as_str().split("\n\n").enumerate() {
         let (a, b) = line.split_once('\n').unwrap();
-        let (a, b) = (List::parse(a), List::parse(b));
-        if a < b {
+        if List::parse(a) < List::parse(b) {
             res1 += 1 + idx;
         }
     }
+
     let mut lists: Vec<List> = input
         .as_str()
         .lines()
         .filter(|l| !l.is_empty())
-        .map(|l| List::parse(l))
+        .map(List::parse)
         .collect();
+
     let div_a = List::List(vec![List::List(vec![List::Number(2)])]);
     let div_b = List::List(vec![List::List(vec![List::Number(6)])]);
     lists.push(div_a.clone());
     lists.push(div_b.clone());
-    lists.sort();
-    let res2 = (1 + lists.iter().position(|l| *l == div_a).unwrap())
-        * (1 + lists.iter().position(|l| *l == div_b).unwrap());
+    lists.sort_unstable();
+    let a_pos = lists.iter().position(|l| *l == div_a).unwrap();
+    let b_pos = lists.iter().position(|l| *l == div_b).unwrap();
+    let res2 = (1 + a_pos) * (1 + b_pos);
+
     (res1, res2)
 }
 
@@ -38,32 +41,37 @@ impl List {
     }
 }
 
-impl PartialOrd for List {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
+// We establish an ordering for lists.
+// Using this, we can simply sort the lists in part 2.
 impl Ord for List {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
             (List::Number(s), List::Number(o)) => s.cmp(o),
-            (List::List(s), List::List(o)) => s
-                .iter()
-                .zip(o.iter())
-                .filter_map(|(a, b)| {
-                    let o = a.cmp(b);
-                    if o != Ordering::Equal {
-                        Some(o)
-                    } else {
-                        None
-                    }
-                })
-                .next()
-                .unwrap_or(s.len().cmp(&o.len())),
-            (s, List::Number(o)) => s.cmp(&List::List(vec![List::Number(*o)])),
-            (List::Number(s), o) => List::List(vec![List::Number(*s)]).cmp(o),
+            (List::List(s), List::List(o)) => {
+                let elem_cmp = s
+                    .iter()
+                    .zip(o.iter())
+                    .map(|(a, b)| a.cmp(b))
+                    .find(|o| *o != Ordering::Equal);
+                let length_cmp = s.len().cmp(&o.len());
+                elem_cmp.unwrap_or(length_cmp)
+            }
+            (List::List(s), o) => s
+                .get(0)
+                .map_or(Ordering::Less, |s0| s0.cmp(o))
+                .then(s.len().cmp(&1)),
+            (s, List::List(o)) => o
+                .get(0)
+                .map_or(Ordering::Greater, |o0| s.cmp(o0))
+                .then(1.cmp(&o.len())),
         }
+    }
+}
+
+// Implementation of PartialOrd is required to implement Ord.
+impl PartialOrd for List {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -78,15 +86,19 @@ mod parser {
     };
 
     pub fn parse(input: &str) -> IResult<&str, List> {
-        let list = separated_list0(char(','), parse).map(|l| List::List(l));
+        let list = separated_list0(char(','), parse).map(List::List);
         let list = delimited(char('['), list, char(']'));
-        let number = decimal.map(|n| List::Number(n));
+        let number = decimal.map(List::Number);
         list.or(number).parse(input)
     }
 
     fn decimal(input: &str) -> IResult<&str, u32> {
-        recognize(many1(terminated(one_of("0123456789"), many0(char('_')))))(input)
-            .map(|(i, o)| (i, o.parse::<u32>().unwrap()))
+        recognize(many1(terminated(
+            one_of("0123456789"),
+            many0(char::<&str, _>('_')),
+        )))
+        .map(|o| o.parse::<u32>().unwrap())
+        .parse(input)
     }
 }
 

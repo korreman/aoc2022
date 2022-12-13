@@ -1,21 +1,21 @@
 use ascii::AsciiStr;
+use itertools::Itertools;
 use std::cmp::Ordering;
 
 pub fn run(input: &AsciiStr) -> (usize, usize) {
-    let mut res1 = 0;
-    for (idx, line) in input.as_str().split("\n\n").enumerate() {
-        let (a, b) = line.split_once('\n').unwrap();
-        if List::parse(a) < List::parse(b) {
-            res1 += 1 + idx;
-        }
-    }
-
     let mut lists: Vec<List> = input
         .as_str()
         .lines()
         .filter(|l| !l.is_empty())
         .map(List::parse)
         .collect();
+
+    let mut res1 = 0;
+    for (idx, (a, b)) in lists.iter().tuples().enumerate() {
+        if a < b {
+            res1 += 1 + idx;
+        }
+    }
 
     let div_a = List::List(vec![List::List(vec![List::Number(2)])]);
     let div_b = List::List(vec![List::List(vec![List::Number(6)])]);

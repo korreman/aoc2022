@@ -81,6 +81,10 @@ impl<T> Grid<T> {
         self.height
     }
 
+    pub fn contains(&self, p: Pos) -> bool {
+        p.x < self.width && p.y < self.height
+    }
+
     pub fn neighbors(&self, p: Pos) -> Neighbors {
         Neighbors {
             center: p,

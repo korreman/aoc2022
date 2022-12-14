@@ -63,7 +63,7 @@ pub fn run(input: &str) -> (usize, usize) {
     // Simulate
     let mut res1 = 0;
     let mut res2 = 0;
-    'simulation: loop {
+    loop {
         let mut p = Pos { x: spawn, y: 0 };
         'falling: loop {
             for &target in &[
@@ -88,18 +88,16 @@ pub fn run(input: &str) -> (usize, usize) {
                     continue 'falling;
                 }
             }
-            if p == (Pos { x: spawn, y: 0 }) {
-                break 'simulation;
-            }
             break 'falling;
         }
-        let c = grid.get_mut(p);
-        assert!(c == Some(&mut Cell::Air), "Cell {p:?} isn't air!\n{grid}!");
-        grid[p] = Cell::Sand;
+        if grid[p] == Cell::Air {
+            grid[p] = Cell::Sand;
+        } else {
+            break;
+        }
         res2 += 1;
     }
-
-    (res1, res2 + 1)
+    (res1, res2)
 }
 
 #[cfg(test)]
@@ -107,7 +105,6 @@ mod tests {
     #[test]
     fn test() {
         let input = "498,4 -> 498,6 -> 496,6\n503,4 -> 502,4 -> 502,9 -> 494,9";
-        let (res1, res2) = super::run(input);
-        assert_eq!(res1, 24);
+        assert_eq!(super::run(input), (24, 93));
     }
 }

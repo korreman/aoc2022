@@ -1,24 +1,11 @@
 pub fn run(input: &str) -> (usize, usize) {
-    let res1 = task_fast(input, 4);
-    let res2 = task_fast(input, 14);
+    let res1 = task(input, 4);
+    let res2 = task(input, 14);
     (res1, res2)
 }
 
-/// Sliding window, generate a bitset and check its length.
-fn _task(input: &str, length: usize) -> usize {
-    input
-        .as_bytes()
-        .windows(length)
-        .position(|window| {
-            let set = window.iter().fold(0u32, |acc, c| (acc | (1 << (c - b'a'))));
-            set.count_ones() == length as u32
-        })
-        .expect("no packet marker detected!")
-        + length
-}
-
 /// Bitset solution that skips work by jumping past windows that we already know aren't markers.
-fn task_fast(input: &str, length: usize) -> usize {
+fn task(input: &str, length: usize) -> usize {
     let input = input.as_bytes();
     let mut i = 0;
     'outer: while i + length < input.len() {

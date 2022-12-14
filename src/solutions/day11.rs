@@ -50,61 +50,37 @@ struct Monkey {
     inspection_count: usize,
     items: Vec<u64>,
     op: Binop,
-    test_div: u64,
+    test: u64,
     pos: usize,
     neg: usize,
 }
 
 pub fn run(input: &str) -> (usize, usize) {
-    // Not my proudest work...
     let make_monkey = |p: &str| {
         let mut lines = p.lines();
         drop(lines.next());
-        let items = lines
-            .next()?
-            .strip_prefix("  Starting items: ")?
+        let items = lines.next()?[18..]
             .split(", ")
             .map(|n| n.parse::<u64>().unwrap())
-            .collect_vec();
-        let op = lines
-            .next()?
-            .strip_prefix("  Operation: new = ")?
-            .split(' ')
-            .collect_vec();
-        let op = match op.as_slice() {
-            [a, op, b] => {
-                let a = Operand::parse(a);
-                let b = Operand::parse(b);
-                let op = match *op {
-                    "+" => Op::Add,
-                    "*" => Op::Mul,
-                    _ => panic!(),
-                };
-                Binop { a, b, op }
-            }
+            .collect();
+        let (a, op, b) = lines.next()?[19..].split(' ').collect_tuple().unwrap();
+        let test = lines.next()?[21..].parse::<u64>().ok()?;
+        let pos = lines.next()?[29..].parse::<usize>().ok()?;
+        let neg = lines.next()?[30..].parse::<usize>().ok()?;
+
+        let a = Operand::parse(a);
+        let b = Operand::parse(b);
+        let op = match op {
+            "+" => Op::Add,
+            "*" => Op::Mul,
             _ => panic!(),
         };
-        let test_div = lines
-            .next()?
-            .strip_prefix("  Test: divisible by ")?
-            .parse::<u64>()
-            .ok()?;
-        let pos = lines
-            .next()?
-            .strip_prefix("    If true: throw to monkey ")?
-            .parse::<usize>()
-            .ok()?;
-        let neg = lines
-            .next()?
-            .strip_prefix("    If false: throw to monkey ")
-            .unwrap()
-            .parse::<usize>()
-            .ok()?;
+        let op = Binop { a, b, op };
         Some(Monkey {
             inspection_count: 0,
             items,
             op,
-            test_div,
+            test,
             pos,
             neg,
         })
@@ -116,7 +92,7 @@ pub fn run(input: &str) -> (usize, usize) {
 
     let res1 = play(20, monkeys.clone(), |x| x / 3);
 
-    let modulo: u64 = monkeys.iter().map(|monkey| monkey.test_div).product();
+    let modulo: u64 = monkeys.iter().map(|monkey| monkey.test).product();
     let res2 = play(10000, monkeys, |x| x % modulo);
 
     (res1, res2)
@@ -132,7 +108,7 @@ where
             for item in monkey.items.iter() {
                 monkey.inspection_count += 1;
                 let item = worry_reduction(monkey.op.apply(*item));
-                let target = if item % monkey.test_div == 0 {
+                let target = if item % monkey.test == 0 {
                     monkey.pos
                 } else {
                     monkey.neg

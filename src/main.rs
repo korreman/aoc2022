@@ -9,27 +9,33 @@ mod optimized;
 
 fn main() {
     let mut state = State::new();
-    state.run_day(&solutions::day01::run, "input/day01.txt");
-    state.run_day(&solutions::day02::run, "input/day02.txt");
-    state.run_day(&solutions::day03::run, "input/day03.txt");
-    state.run_day(&solutions::day04::run, "input/day04.txt");
-    state.run_day(&solutions::day05::run, "input/day05.txt");
-    state.run_day(&solutions::day06::run, "input/day06.txt");
-    state.run_day(&solutions::day07::run, "input/day07.txt");
-    state.run_day(&solutions::day08::run, "input/day08.txt");
-    state.run_day(&solutions::day09::run, "input/day09.txt");
-    let (_, day10part2) = state.run_day(&solutions::day10::run, "input/day10.txt");
-    state.run_day(&solutions::day11::run, "input/day11.txt");
-    state.run_day(&solutions::day12::run, "input/day12.txt");
-    state.run_day(&solutions::day13::run, "input/day13.txt");
-    state.run_day(&solutions::day14::run, "input/day14.txt");
+    state.run_day(01, &solutions::day01::run, "input/day01.txt");
+    state.run_day(02, &solutions::day02::run, "input/day02.txt");
+    state.run_day(03, &solutions::day03::run, "input/day03.txt");
+    state.run_day(04, &solutions::day04::run, "input/day04.txt");
+    state.run_day(05, &solutions::day05::run, "input/day05.txt");
+    state.run_day(06, &solutions::day06::run, "input/day06.txt");
+    state.run_day(07, &solutions::day07::run, "input/day07.txt");
+    state.run_day(08, &solutions::day08::run, "input/day08.txt");
+    state.run_day(00, &solutions::day09::run, "input/day09.txt");
+    let (_, day10part2) = state.run_day(10, &solutions::day10::run, "input/day10.txt");
+    state.run_day(11, &solutions::day11::run, "input/day11.txt");
+    state.run_day(12, &solutions::day12::run, "input/day12.txt");
+    state.run_day(13, &solutions::day13::run, "input/day13.txt");
+    state.run_day(14, &solutions::day14::run, "input/day14.txt");
 
     state.print();
     println!("{day10part2:?}");
+
+    println!("Optimized solutions:");
+    let mut state = State::new();
+    state.run_day(01, &optimized::day01::run, "input/day01.txt");
+    state.run_day(06, &optimized::day06::run, "input/day06.txt");
+    state.run_day(14, &optimized::day14::run, "input/day14.txt");
+    state.print();
 }
 
 struct State {
-    day_counter: usize,
     table: Table,
     total: Duration,
 }
@@ -40,7 +46,6 @@ impl State {
         table.load_preset(UTF8_FULL_CONDENSED);
         table.set_header(vec!["Day", "Part 1", "Part 2", "Time"]);
         Self {
-            day_counter: 1,
             table,
             total: Duration::ZERO,
         }
@@ -48,6 +53,7 @@ impl State {
 
     fn run_day<A1: Display, A2: Display>(
         &mut self,
+        day: usize,
         task: &dyn Fn(&str) -> (A1, A2),
         input_path: &str,
     ) -> (A1, A2) {
@@ -59,13 +65,12 @@ impl State {
         let delta = end.duration_since(start);
 
         self.table.add_row(vec![
-            Cell::new(self.day_counter.to_string()).set_alignment(CellAlignment::Right),
+            Cell::new(day.to_string()).set_alignment(CellAlignment::Right),
             Cell::new(res1.to_string()).set_alignment(CellAlignment::Right),
             Cell::new(res2.to_string()).set_alignment(CellAlignment::Right),
             Cell::new(format!("{delta:.2?}")).set_alignment(CellAlignment::Right),
         ]);
         self.total += delta;
-        self.day_counter += 1;
 
         (res1, res2)
     }

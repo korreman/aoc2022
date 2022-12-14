@@ -4,36 +4,24 @@ use std::time::{Duration, Instant};
 use comfy_table::{presets::UTF8_FULL_CONDENSED, Cell, CellAlignment, Table};
 
 pub mod util;
-
-mod day01;
-mod day02;
-mod day03;
-mod day04;
-mod day05;
-mod day06;
-mod day07;
-mod day08;
-mod day09;
-mod day10;
-mod day11;
-mod day12;
-mod day13;
+mod solutions;
+mod optimized;
 
 fn main() {
     let mut state = State::new();
-    state.run_day(&day01::run, "input/day01.txt");
-    state.run_day(&day02::run, "input/day02.txt");
-    state.run_day(&day03::run, "input/day03.txt");
-    state.run_day(&day04::run, "input/day04.txt");
-    state.run_day(&day05::run, "input/day05.txt");
-    state.run_day(&day06::run, "input/day06.txt");
-    state.run_day(&day07::run, "input/day07.txt");
-    state.run_day(&day08::run, "input/day08.txt");
-    state.run_day(&day09::run, "input/day09.txt");
-    let (_, day10part2) = state.run_day(&day10::run, "input/day10.txt");
-    state.run_day(&day11::run, "input/day11.txt");
-    state.run_day(&day12::run, "input/day12.txt");
-    state.run_day(&day13::run, "input/day13.txt");
+    state.run_day(&solutions::day01::run, "input/day01.txt");
+    state.run_day(&solutions::day02::run, "input/day02.txt");
+    state.run_day(&solutions::day03::run, "input/day03.txt");
+    state.run_day(&solutions::day04::run, "input/day04.txt");
+    state.run_day(&solutions::day05::run, "input/day05.txt");
+    state.run_day(&solutions::day06::run, "input/day06.txt");
+    state.run_day(&solutions::day07::run, "input/day07.txt");
+    state.run_day(&solutions::day08::run, "input/day08.txt");
+    state.run_day(&solutions::day09::run, "input/day09.txt");
+    let (_, day10part2) = state.run_day(&solutions::day10::run, "input/day10.txt");
+    state.run_day(&solutions::day11::run, "input/day11.txt");
+    state.run_day(&solutions::day12::run, "input/day12.txt");
+    state.run_day(&solutions::day13::run, "input/day13.txt");
 
     state.print();
     println!("{day10part2:?}");

@@ -36,25 +36,12 @@ pub fn run(input: &str) -> (usize, usize) {
                 .collect()
         })
         .collect();
-    let spawn = 500;
-
     let width = 1000;
     let height = structures.iter().flatten().map(|p| p.y).max().unwrap() + 2;
-
     let mut grid = Grid::new_filled(width, height, Cell::Air);
     for structure in &structures {
         for (a, b) in structure.iter().tuple_windows() {
-            let range = if a.x != b.x {
-                (usize::min(a.x, b.x)..=usize::max(a.x, b.x))
-                    .map(|x| Pos { x, y: a.y })
-                    .collect_vec()
-            } else {
-                (usize::min(a.y, b.y)..=usize::max(a.y, b.y))
-                    .map(|y| Pos { x: a.x, y })
-                    .collect_vec()
-            };
-
-            for pos in range {
+            for pos in a.line(b).unwrap() {
                 grid[pos] = Cell::Rock;
             }
         }
@@ -64,7 +51,7 @@ pub fn run(input: &str) -> (usize, usize) {
     let mut res1 = 0;
     let mut res2 = 0;
     loop {
-        let mut p = Pos { x: spawn, y: 0 };
+        let mut p = Pos { x: 500, y: 0 };
         'falling: loop {
             for &target in &[
                 Pos { x: p.x, y: p.y + 1 },

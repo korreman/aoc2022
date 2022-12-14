@@ -12,8 +12,50 @@ pub struct Pos {
 impl Pos {
     pub const ZERO: Self = Pos { x: 0, y: 0 };
 
+    // Manhattan distance to other position.
     pub fn dist(&self, other: &Pos) -> usize {
         self.x.abs_diff(other.x) + self.y.abs_diff(other.y)
+    }
+
+    /// Generates a sequence of positions in a line from self to other (inclusive).
+    pub fn line(self, other: &Self) -> Option<Line> {
+        if self.x != other.x && self.y != other.y {
+            None
+        } else {
+            Some(Line {
+                current: self,
+                target: other,
+                done: false,
+            })
+        }
+    }
+}
+
+pub struct Line<'a> {
+    current: Pos,
+    target: &'a Pos,
+    done: bool,
+}
+
+impl<'a> Iterator for Line<'a> {
+    type Item = Pos;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let res = self.current;
+        if self.done {
+            return None;
+        } else if self.current.x < self.target.x {
+            self.current.x += 1;
+        } else if self.current.x > self.target.x {
+            self.current.x -= 1;
+        } else if self.current.y < self.target.y {
+            self.current.y += 1;
+        } else if self.current.y > self.target.y {
+            self.current.y -= 1;
+        } else {
+            self.done = true;
+        }
+        Some(res)
     }
 }
 

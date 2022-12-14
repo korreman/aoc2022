@@ -9,6 +9,10 @@ pub struct Pos {
     pub y: usize,
 }
 
+pub fn pos(x: usize, y: usize) -> Pos {
+    Pos { x, y }
+}
+
 impl Pos {
     pub const ZERO: Self = Pos { x: 0, y: 0 };
 

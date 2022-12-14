@@ -1,6 +1,6 @@
 use std::fmt::{Display, Write};
 
-use crate::util::grid::{Grid, Pos};
+use crate::util::grid::{pos, Grid, Pos};
 use itertools::Itertools;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -23,7 +23,7 @@ impl Display for Cell {
 
 pub fn run(input: &str) -> (usize, usize) {
     // Parse
-    let structures: Vec<Vec<Pos>> = input
+    let mut structures: Vec<Vec<Pos>> = input
         .lines()
         .map(|line| {
             line.split(" -> ")
@@ -36,9 +36,15 @@ pub fn run(input: &str) -> (usize, usize) {
                 .collect()
         })
         .collect();
-    let width = 1000;
-    let height = structures.iter().flatten().map(|p| p.y).max().unwrap() + 2;
+
+    let width = 1001;
+    let height = structures.iter().flatten().map(|p| p.y).max().unwrap() + 3;
     let mut grid = Grid::new_filled(width, height, Cell::Air);
+
+    structures.push(vec![
+        pos(0, grid.height() - 1),
+        pos(grid.width() - 1, grid.height() - 1),
+    ]);
     for structure in &structures {
         for (a, b) in structure.iter().tuple_windows() {
             for pos in a.line(b).unwrap() {
@@ -52,39 +58,24 @@ pub fn run(input: &str) -> (usize, usize) {
     let mut res2 = 0;
     loop {
         let mut p = Pos { x: 500, y: 0 };
-        'falling: loop {
-            for &target in &[
-                Pos { x: p.x, y: p.y + 1 },
-                Pos {
-                    x: p.x - 1,
-                    y: p.y + 1,
-                },
-                Pos {
-                    x: p.x + 1,
-                    y: p.y + 1,
-                },
-            ] {
-                if p.y == grid.height() - 1 {
-                    if res1 == 0 {
-                        res1 = res2;
-                    }
-                    break 'falling;
-                }
+        'fall: loop {
+            for &target_x in &[p.x, p.x - 1, p.x + 1] {
+                let target = pos(target_x, p.y + 1);
                 if grid[target] == Cell::Air {
                     p = target;
-                    continue 'falling;
+                    continue 'fall;
                 }
             }
-            break 'falling;
-        }
-        if grid[p] == Cell::Air {
-            grid[p] = Cell::Sand;
-        } else {
             break;
         }
+        if p.y == grid.height() - 2 && res1 == 0 {
+            res1 = res2;
+        } else if p.y == 0 {
+            return (res1, res2 + 1);
+        }
+        grid[p] = Cell::Sand;
         res2 += 1;
     }
-    (res1, res2)
 }
 
 #[cfg(test)]

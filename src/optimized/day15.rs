@@ -9,9 +9,13 @@ struct Diamond {
     size: u32,
 }
 
+fn dist(a: (i32, i32), b: (i32, i32)) -> u32 {
+    a.0.abs_diff(b.0) + a.1.abs_diff(b.1)
+}
+
 impl Diamond {
     fn infer(pos: (i32, i32), beacon: (i32, i32)) -> Self {
-        let size = pos.0.abs_diff(beacon.0) + pos.1.abs_diff(beacon.1);
+        let size = dist(pos, beacon);
         Self {
             x: pos.0,
             y: pos.1,
@@ -38,7 +42,8 @@ impl Diamond {
     }
 
     // Produces 8 points that are possibly intersections of the diamonds (grown by 1).
-    // I have to admit that I don't quite understand the math.
+    // We effectively treat each line of the diamond as a function,
+    // and solve the intersections of these.
     fn pseudo_intersections(&self, other: &Self) -> [(i32, i32); 8] {
         let p = |a, b, c, d| {
             let s = self.x + a * self.y + b * (self.size as i32 + 1);
@@ -169,19 +174,19 @@ pub fn run(input: &str) -> (i32, u64) {
     }
 
     let mut beacon = None;
-    'outer: for diamond in &diamonds {
-        for point in diamonds
-            .iter()
-            .flat_map(|d| diamond.pseudo_intersections(d).into_iter())
-        {
-            let inside_space =
-                point.0 >= 0 && point.0 <= search_space && point.1 >= 0 && point.1 <= search_space;
-            if inside_space && diamonds.iter().all(|d| !d.contains(point)) {
-                beacon = Some(point);
-                break 'outer;
-            }
+    for point in diamonds.iter().tuple_combinations().flat_map(|(d1, d2)| {
+        d1.pseudo_intersections(d2)
+            .into_iter()
+            .filter(|p| dist(*p, (d1.x, d1.y)) == d1.size + 1)
+    }) {
+        let inside_space =
+            point.0 >= 0 && point.0 <= search_space && point.1 >= 0 && point.1 <= search_space;
+        if inside_space && diamonds.iter().all(|d| !d.contains(point)) {
+            beacon = Some(point);
+            break;
         }
     }
+
     let beacon = beacon.expect("no beacon found");
     let res2 = beacon.0 as u64 * 4_000_000 + beacon.1 as u64;
     (res1, res2)

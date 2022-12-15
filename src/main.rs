@@ -32,6 +32,7 @@ fn main() {
     let mut state = State::new();
     state.run_day(01, &optimized::day01::run, "input/day01.txt");
     state.run_day(06, &optimized::day06::run, "input/day06.txt");
+    state.run_day(11, &optimized::day11::run, "input/day11.txt");
     state.run_day(14, &optimized::day14::run, "input/day14.txt");
     state.run_day(15, &optimized::day15::run, "input/day15.txt");
     state.print();

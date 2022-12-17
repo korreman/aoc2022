@@ -1,11 +1,13 @@
-use std::{ops::{Index, IndexMut}, mem::swap};
-
 use crate::util::queue::Queue;
+use std::{
+    mem::swap,
+    ops::{Index, IndexMut},
+};
 
 pub trait Graph {
     type Handle: Copy;
-    type Inner<T>: GraphInner<Self::Handle, T>;
-    fn map<T, U, F: FnMut(T) -> U>(graph: &Self::Inner<T>, f: F) -> Self::Inner<U>;
+    type Graph<T>: GraphInner<Self::Handle, T>;
+    fn map<T, U, F: FnMut(T) -> U>(graph: &Self::Graph<T>, f: F) -> Self::Graph<U>;
 }
 
 pub trait GraphInner<H, T>
@@ -17,21 +19,22 @@ where
 }
 
 pub fn bfs<T, G: Graph>(
-    graph: &G::Inner<T>,
+    graph: &G::Graph<T>,
     start: G::Handle,
-    is_target: impl Fn(G::Handle) -> bool,
+    mut is_target: impl FnMut(usize, G::Handle) -> bool,
 ) -> Option<usize> {
     let mut visited = G::map(graph, |_| false);
     let mut handles = Vec::new();
-    let mut off_handles = Vec::new();
     handles.push(start);
-    let mut i = 0;
+
+    let mut off_handles = Vec::new();
+    let mut c = 0;
     while !handles.is_empty() {
-        i += 1;
+        c += 1;
         swap(&mut handles, &mut off_handles);
         for h in off_handles.drain(..) {
-            if is_target(h) {
-                return Some(i);
+            if is_target(c, h) {
+                return Some(c);
             }
             for n in graph.neighbors(&h) {
                 if !visited[n] {
@@ -45,26 +48,25 @@ pub fn bfs<T, G: Graph>(
 }
 
 pub fn dijkstra<T, G, Q>(
-    graph: &G::Inner<T>,
+    graph: &G::Graph<T>,
     cost: impl Fn(G::Handle, G::Handle) -> Option<usize>,
-    is_target: impl Fn(G::Handle) -> bool,
+    mut is_target: impl FnMut(usize, G::Handle) -> bool,
     start: G::Handle,
 ) -> Option<usize>
 where
     G: Graph,
     Q: Queue<G::Handle, Priority = usize>,
 {
-    let mut costs: G::Inner<usize> = G::map(graph, |_| usize::MAX);
+    let mut costs: G::Graph<usize> = G::map(graph, |_| usize::MAX);
     let mut queue = Q::new();
 
     costs[start] = 0;
     queue.add(0, start);
-
     while let Some((c, h)) = queue.next() {
         if c != costs[h] {
             continue;
         }
-        if is_target(h) {
+        if is_target(c, h) {
             return Some(c);
         }
         for n in graph.neighbors(&h) {
@@ -87,28 +89,27 @@ where
 /// It must never exceed the actual cost of the shortest path,
 /// or the optimal path might be forgotten.
 pub fn a_star<T, G, Q>(
-    graph: &G::Inner<T>,
+    graph: &G::Graph<T>,
     cost: impl Fn(G::Handle, G::Handle) -> Option<usize>,
     heuristic: impl Fn(G::Handle) -> usize,
-    is_target: impl Fn(G::Handle) -> bool,
+    mut is_target: impl FnMut(usize, G::Handle) -> bool,
     start: G::Handle,
 ) -> Option<usize>
 where
     G: Graph,
     Q: Queue<G::Handle, Priority = usize>,
 {
-    let mut costs: G::Inner<usize> = G::map(graph, |_| usize::MAX);
+    let mut costs: G::Graph<usize> = G::map(graph, |_| usize::MAX);
     let mut queue = Q::new();
 
     costs[start] = 0;
     queue.add(heuristic(start), start);
-
     while let Some((p, h)) = queue.next() {
         let c = p - heuristic(h);
         if c != costs[h] {
             continue;
         }
-        if is_target(h) {
+        if is_target(c, h) {
             return Some(c);
         }
         for n in graph.neighbors(&h) {

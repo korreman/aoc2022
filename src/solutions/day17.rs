@@ -77,10 +77,7 @@ pub fn run(input: &str) -> (usize, usize) {
     let mut shape = shapes.next().unwrap();
     let mut board = Board::new();
     let mut p = board.next_pos();
-    for i in 0..1_000_000_000_000u64{
-        if i % 1_000_000 == 0 {
-            println!("{i}");
-        }
+    for i in 0..2022 {
         loop {
             let wind_p = match wind.next().unwrap() {
                 b'>' => pos(p.x + 1, p.y),

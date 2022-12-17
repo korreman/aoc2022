@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use std::{
     collections::VecDeque,
     fmt::{Display, Write},
@@ -39,12 +38,14 @@ impl Tower {
     }
 
     fn place(&mut self, mut shape: Row4, wind: &mut impl Iterator<Item = u8>) {
+        // SEARCH
         let mut window: Row4 = 0;
         // Ensure a buffer of 4 empty rows above the highest rock
         // (so we can blit our shape)
         while self.rows[self.rows.len() - 4] != 0 {
             self.rows.push_back(0);
         }
+        let mut target_row = None;
         for (row_idx, row_data) in self.rows.iter().enumerate().rev().skip(1) {
             // Attempt to move the shape
             let blown_shape = match wind.next().unwrap() {
@@ -58,13 +59,25 @@ impl Tower {
             }
             // Move window down one row
             window = (window << 8) | *row_data as u32;
-            // If the shape now collides, place it one row higher than the current window
+            // If the shape now collides, the target row is the previous one
             if shape & window != 0 {
-                for (i, b) in shape.to_le_bytes().iter().enumerate() {
-                    self.rows[(row_idx + 1) + i] |= *b;
-                }
+                target_row = Some(row_idx + 1);
                 break;
             }
+        }
+
+        // PLACE
+        let target_row = target_row.unwrap();
+        let mut blocked = None;
+        for (i, b) in shape.to_le_bytes().iter().enumerate() {
+            self.rows[target_row + i] |= *b;
+            if self.rows[target_row + i] == 0b01111111 {
+                blocked = Some(target_row + i);
+            }
+        }
+        if let Some(blocked) = blocked {
+            self.forgotten += blocked;
+            drop(self.rows.drain(0..blocked))
         }
     }
 

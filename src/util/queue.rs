@@ -195,7 +195,6 @@ mod tests {
         queue.add(3, ());
         queue.add(7, ());
         assert_eq!(queue.next(), Some((3, ())));
-        queue.print();
         assert_eq!(queue.next(), Some((5, ())));
         assert_eq!(queue.next(), Some((7, ())));
     }

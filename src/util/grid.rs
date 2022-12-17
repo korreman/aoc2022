@@ -3,6 +3,8 @@ use std::{
     ops::{Index, IndexMut},
 };
 
+use super::pathfinding::{Graph, GraphInner};
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Pos {
     pub x: usize,
@@ -131,15 +133,6 @@ impl<T> Grid<T> {
         p.x < self.width && p.y < self.height
     }
 
-    pub fn neighbors(&self, p: Pos) -> Neighbors {
-        Neighbors {
-            center: p,
-            width: self.width,
-            height: self.height,
-            state: 0,
-        }
-    }
-
     pub fn find_pos<P>(&self, p: P) -> Option<Pos>
     where
         P: Copy + Fn(&T) -> bool,
@@ -164,6 +157,40 @@ impl<T> Grid<T> {
                 let p = Pos { x, y };
                 f(p, &mut self[p])
             }
+        }
+    }
+}
+
+pub struct GridGraph;
+impl Graph for GridGraph {
+    type Handle = Pos;
+
+    type Graph<T> = Grid<T>;
+
+    fn map<T, U, F: FnMut(&T) -> U>(graph: &Self::Graph<T>, mut f: F) -> Self::Graph<U> {
+        let mut data = Vec::with_capacity(graph.width * graph.height);
+        for y in 0..graph.height {
+            for x in 0..graph.width {
+                data.push(f(&graph[pos(x, y)]));
+            }
+        }
+        Grid {
+            data,
+            width: graph.width,
+            height: graph.height,
+        }
+    }
+}
+
+impl<T> GraphInner<Pos, T> for Grid<T> {
+    type Nodes = Neighbors;
+
+    fn neighbors(&self, handle: Pos) -> Self::Nodes {
+        Neighbors {
+            center: handle,
+            width: self.width,
+            height: self.height,
+            state: 0,
         }
     }
 }

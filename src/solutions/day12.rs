@@ -1,4 +1,7 @@
-use crate::util::grid::{Grid, Pos};
+use crate::util::{
+    grid::{Grid, GridGraph, Pos},
+    pathfinding::bfs,
+};
 
 pub fn run(input: &str) -> (usize, usize) {
     let mut start = Pos::ZERO;
@@ -11,32 +14,20 @@ pub fn run(input: &str) -> (usize, usize) {
         c => c as u8 - b'a',
     });
 
-    return bfs(&grid, start, end).unwrap();
-}
-
-pub fn bfs(grid: &Grid<u8>, start: Pos, end: Pos) -> Option<(usize, usize)> {
-    let mut visited = Grid::new_filled(grid.width(), grid.height(), false);
-    let mut positions = vec![end];
-    let mut step = 0;
-    let mut res2 = 0;
-    while !positions.is_empty() {
-        for position in std::mem::take(&mut positions) {
-            if grid[position] == 0 && res2 == 0 {
-                res2 = step;
+    let mut res2 = None;
+    let res1 = bfs(
+        GridGraph,
+        &grid,
+        end,
+        |p, n| grid[p] as i16 - grid[n] as i16 <= 1,
+        |c, p| {
+            if grid[p] == 0 && res2.is_none() {
+                res2 = Some(c);
             }
-            if position == start {
-                return Some((step, res2));
-            }
-            for neighbor in grid.neighbors(position) {
-                if grid[position] as i16 - grid[neighbor] as i16 <= 1 && !visited[neighbor] {
-                    visited[neighbor] = true;
-                    positions.push(neighbor);
-                }
-            }
-        }
-        step += 1;
-    }
-    None
+            p == start
+        },
+    );
+    (res1.unwrap(), res2.unwrap())
 }
 
 #[cfg(test)]

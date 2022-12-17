@@ -7,7 +7,7 @@ use std::{
 pub trait Graph {
     type Handle: Copy;
     type Graph<T>: GraphInner<Self::Handle, T>;
-    fn map<T, U, F: FnMut(T) -> U>(graph: &Self::Graph<T>, f: F) -> Self::Graph<U>;
+    fn map<T, U, F: FnMut(&T) -> U>(graph: &Self::Graph<T>, f: F) -> Self::Graph<U>;
 }
 
 pub trait GraphInner<H, T>
@@ -15,12 +15,14 @@ where
     Self: Index<H, Output = T> + IndexMut<H, Output = T>,
 {
     type Nodes: Iterator<Item = H>;
-    fn neighbors(&self, handle: &H) -> Self::Nodes;
+    fn neighbors(&self, handle: H) -> Self::Nodes;
 }
 
 pub fn bfs<T, G: Graph>(
+    _graph_type: G,
     graph: &G::Graph<T>,
     start: G::Handle,
+    valid_neighbor: impl Fn(G::Handle, G::Handle) -> bool,
     mut is_target: impl FnMut(usize, G::Handle) -> bool,
 ) -> Option<usize> {
     let mut visited = G::map(graph, |_| false);
@@ -30,19 +32,19 @@ pub fn bfs<T, G: Graph>(
     let mut off_handles = Vec::new();
     let mut c = 0;
     while !handles.is_empty() {
-        c += 1;
         swap(&mut handles, &mut off_handles);
         for h in off_handles.drain(..) {
             if is_target(c, h) {
                 return Some(c);
             }
-            for n in graph.neighbors(&h) {
-                if !visited[n] {
+            for n in graph.neighbors(h) {
+                if valid_neighbor(h, n) && !visited[n] {
                     visited[n] = true;
                     handles.push(n);
                 }
             }
         }
+        c += 1;
     }
     None
 }
@@ -69,7 +71,7 @@ where
         if is_target(c, h) {
             return Some(c);
         }
-        for n in graph.neighbors(&h) {
+        for n in graph.neighbors(h) {
             if let Some(move_cost) = cost(h, n) {
                 let nc = c + move_cost;
                 if nc < costs[n] {
@@ -112,7 +114,7 @@ where
         if is_target(c, h) {
             return Some(c);
         }
-        for n in graph.neighbors(&h) {
+        for n in graph.neighbors(h) {
             if let Some(move_cost) = cost(h, n) {
                 let nc = c + move_cost;
                 if nc < costs[n] {

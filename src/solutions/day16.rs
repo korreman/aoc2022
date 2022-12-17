@@ -1,3 +1,4 @@
+use crate::util::graph::{Graph, VecGraph};
 use itertools::Itertools;
 
 #[derive(Debug)]
@@ -21,35 +22,22 @@ impl<'a> PValve<'a> {
             tunnels,
         })
     }
-}
 
-#[derive(Debug)]
-struct Valve {
-    flow: u64,
-    tunnels: Vec<usize>,
-}
-
-impl Valve {
-    fn from_pvalves(pvalves: &[PValve]) -> Vec<Valve> {
-        pvalves
-            .iter()
-            .map(|pvalve| {
-                let tunnels = pvalve
-                    .tunnels
-                    .iter()
-                    .map(|tunnel| {
-                        pvalves
-                            .iter()
-                            .position(|dest| dest.label == *tunnel)
-                            .unwrap()
-                    })
-                    .collect_vec();
-                Valve {
-                    flow: pvalve.flow,
-                    tunnels,
-                }
-            })
-            .collect_vec()
+    fn transform_handles(pvalves: &[PValve]) -> Vec<(u64, Vec<usize>)> {
+        let transform = |pvalve: &PValve| {
+            let tunnels = pvalve
+                .tunnels
+                .iter()
+                .map(|tunnel| {
+                    pvalves
+                        .iter()
+                        .position(|dest| dest.label == *tunnel)
+                        .unwrap()
+                })
+                .collect_vec();
+            (pvalve.flow, tunnels)
+        };
+        pvalves.iter().map(transform).collect_vec()
     }
 }
 
@@ -59,10 +47,17 @@ pub fn run<'a>(input: &'a str) -> (u64, usize) {
         .lines()
         .map(|l| PValve::parse(l).unwrap())
         .collect_vec();
-    let valves = Valve::from_pvalves(valves.as_slice());
+    let valves = VecGraph::new(PValve::transform_handles(valves.as_slice()));
+    let mut start = 0;
 
-    let mut res1 = 0;
-    (res1, 0)
+    // Alright, strategy time.
+    // I need to find a series of 30 actions that maximizes pressure released.
+    //
+    // We can start by thinking about how to find a path that maximizes the sum of visited nodes.
+    // Each node may only be visited once.
+    //
+
+    (0, 0)
 }
 
 #[cfg(test)]

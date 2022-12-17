@@ -1,22 +1,7 @@
-use crate::util::queue::Queue;
-use std::{
-    mem::swap,
-    ops::{Index, IndexMut},
-};
+use crate::util::{graph::Graph, queue::Queue};
+use std::mem::swap;
 
-pub trait Graph {
-    type Handle: Copy;
-    type Graph<T>: GraphInner<Self::Handle, T>;
-    fn map<T, U, F: FnMut(&T) -> U>(graph: &Self::Graph<T>, f: F) -> Self::Graph<U>;
-}
-
-pub trait GraphInner<H, T>
-where
-    Self: Index<H, Output = T> + IndexMut<H, Output = T>,
-{
-    type Nodes: Iterator<Item = H>;
-    fn neighbors(&self, handle: H) -> Self::Nodes;
-}
+use super::graph::GraphInner;
 
 pub fn bfs<T, G: Graph>(
     _graph_type: G,

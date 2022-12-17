@@ -41,10 +41,11 @@ impl Tower {
     fn place(&mut self, mut shape: Row4, wind: &mut impl Iterator<Item = u8>) {
         let mut window: Row4 = 0;
         // Ensure a buffer of 4 empty rows above the highest rock
+        // (so we can blit our shape)
         while self.rows[self.rows.len() - 4] != 0 {
             self.rows.push_back(0);
         }
-        for (row_idx, row_data) in self.rows.iter().cloned().enumerate().rev().skip(1) {
+        for (row_idx, row_data) in self.rows.iter().enumerate().rev().skip(1) {
             // Attempt to move the shape
             let blown_shape = match wind.next().unwrap() {
                 b'<' if shape & WALL_LEFT == 0 => shape << 1,
@@ -56,8 +57,8 @@ impl Tower {
                 shape = blown_shape;
             }
             // Move window down one row
-            window = (window << 8) | row_data as u32;
-            // If the shape now collides, we must place it one row above
+            window = (window << 8) | *row_data as u32;
+            // If the shape now collides, place it one row higher than the current window
             if shape & window != 0 {
                 for (i, b) in shape.to_le_bytes().iter().enumerate() {
                     self.rows[(row_idx + 1) + i] |= *b;

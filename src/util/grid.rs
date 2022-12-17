@@ -3,7 +3,7 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-use super::pathfinding::{Graph, GraphInner};
+use crate::util::graph::{Graph, GraphInner};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Pos {
@@ -183,9 +183,9 @@ impl Graph for GridGraph {
 }
 
 impl<T> GraphInner<Pos, T> for Grid<T> {
-    type Nodes = Neighbors;
+    type Neighbors = Neighbors;
 
-    fn neighbors(&self, handle: Pos) -> Self::Nodes {
+    fn neighbors(&self, handle: Pos) -> Self::Neighbors {
         Neighbors {
             center: handle,
             width: self.width,

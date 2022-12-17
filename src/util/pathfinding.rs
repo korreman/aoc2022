@@ -1,40 +1,42 @@
-use super::{
-    grid::{Grid, Pos},
-    queue::PriorityQueue,
-};
+use std::{ops::{Index, IndexMut}, mem::swap};
 
-pub fn dijkstra<Q: PriorityQueue<usize, Pos>, T, C, D>(
-    grid: &Grid<T>,
-    start: Pos,
-    cost_func: C,
-    is_target: D,
-) -> Option<usize>
+use crate::util::queue::Queue;
+
+pub trait Graph {
+    type Handle: Copy;
+    type Inner<T>: GraphInner<Self::Handle, T>;
+    fn map<T, U, F: FnMut(T) -> U>(graph: &Self::Inner<T>, f: F) -> Self::Inner<U>;
+}
+
+pub trait GraphInner<H, T>
 where
-    C: Fn(Pos, Pos) -> Option<usize>,
-    D: Fn(Pos) -> bool,
+    Self: Index<H, Output = T> + IndexMut<H, Output = T>,
 {
-    let mut costs = Grid::new_filled(grid.width(), grid.height(), usize::MAX);
-    let mut queue = Q::new();
+    type Nodes: Iterator<Item = H>;
+    fn neighbors(&self, handle: &H) -> Self::Nodes;
+}
 
-    costs[start] = 0;
-    queue.add(0, start);
-
-    while let Some((cost, pos)) = queue.next() {
-        // Skip if the node has been further relaxed.
-        if cost != costs[pos] {
-            continue;
-        }
-        // Finish if the target condition is allowed.
-        if is_target(pos) {
-            return Some(cost);
-        }
-        for nb in grid.neighbors(pos) {
-            if let Some(move_cost) = cost_func(pos, nb) {
-                // Relax
-                let nb_cost = cost + move_cost;
-                if nb_cost < costs[nb] {
-                    costs[nb] = nb_cost;
-                    queue.add(nb_cost, nb);
+pub fn bfs<T, G: Graph>(
+    graph: &G::Inner<T>,
+    start: G::Handle,
+    is_target: impl Fn(G::Handle) -> bool,
+) -> Option<usize> {
+    let mut visited = G::map(graph, |_| false);
+    let mut handles = Vec::new();
+    let mut off_handles = Vec::new();
+    handles.push(start);
+    let mut i = 0;
+    while !handles.is_empty() {
+        i += 1;
+        swap(&mut handles, &mut off_handles);
+        for h in off_handles.drain(..) {
+            if is_target(h) {
+                return Some(i);
+            }
+            for n in graph.neighbors(&h) {
+                if !visited[n] {
+                    visited[n] = true;
+                    handles.push(n);
                 }
             }
         }
@@ -42,41 +44,79 @@ where
     None
 }
 
-/// NOTE: The heuristic must be admissible,
-/// ie. follow certain properties that you should look up again this year.
-pub fn a_star<Q: PriorityQueue<usize, Pos>, T, C, H, D>(
-    grid: &Grid<T>,
-    start: Pos,
-    cost_func: C,
-    heuristic: H,
-    is_target: D,
+pub fn dijkstra<T, G, Q>(
+    graph: &G::Inner<T>,
+    cost: impl Fn(G::Handle, G::Handle) -> Option<usize>,
+    is_target: impl Fn(G::Handle) -> bool,
+    start: G::Handle,
 ) -> Option<usize>
 where
-    C: Fn(Pos, Pos) -> Option<usize>,
-    H: Fn(Pos) -> usize,
-    D: Fn(Pos) -> bool,
+    G: Graph,
+    Q: Queue<G::Handle, Priority = usize>,
 {
-    let mut costs = Grid::new_filled(grid.width(), grid.height(), usize::MAX);
+    let mut costs: G::Inner<usize> = G::map(graph, |_| usize::MAX);
+    let mut queue = Q::new();
+
+    costs[start] = 0;
+    queue.add(0, start);
+
+    while let Some((c, h)) = queue.next() {
+        if c != costs[h] {
+            continue;
+        }
+        if is_target(h) {
+            return Some(c);
+        }
+        for n in graph.neighbors(&h) {
+            if let Some(move_cost) = cost(h, n) {
+                let nc = c + move_cost;
+                if nc < costs[n] {
+                    costs[n] = nc;
+                    queue.add(nc, n);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// NOTE: The `heuristic` must be admissible.
+/// By adding it to the current cost of a node,
+/// you should get an estimate for the total cost of a completed path passing through this node.
+/// Calculated as `f(n) = cost(n) + heuristic(n)`.
+/// It must never exceed the actual cost of the shortest path,
+/// or the optimal path might be forgotten.
+pub fn a_star<T, G, Q>(
+    graph: &G::Inner<T>,
+    cost: impl Fn(G::Handle, G::Handle) -> Option<usize>,
+    heuristic: impl Fn(G::Handle) -> usize,
+    is_target: impl Fn(G::Handle) -> bool,
+    start: G::Handle,
+) -> Option<usize>
+where
+    G: Graph,
+    Q: Queue<G::Handle, Priority = usize>,
+{
+    let mut costs: G::Inner<usize> = G::map(graph, |_| usize::MAX);
     let mut queue = Q::new();
 
     costs[start] = 0;
     queue.add(heuristic(start), start);
 
-    while let Some((priority, pos)) = queue.next() {
-        let cost = priority - heuristic(pos);
-        if cost != costs[pos] {
+    while let Some((p, h)) = queue.next() {
+        let c = p - heuristic(h);
+        if c != costs[h] {
             continue;
         }
-        if is_target(pos) {
-            return Some(cost);
+        if is_target(h) {
+            return Some(c);
         }
-        for nebo in grid.neighbors(pos) {
-            if let Some(move_cost) = cost_func(pos, nebo) {
-                // Relax
-                let nebo_cost = cost + move_cost;
-                if nebo_cost < costs[nebo] {
-                    costs[nebo] = nebo_cost;
-                    queue.add(nebo_cost + heuristic(nebo), nebo);
+        for n in graph.neighbors(&h) {
+            if let Some(move_cost) = cost(h, n) {
+                let nc = c + move_cost;
+                if nc < costs[n] {
+                    costs[n] = nc;
+                    queue.add(nc + heuristic(n), n);
                 }
             }
         }

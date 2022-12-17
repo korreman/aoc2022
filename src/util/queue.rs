@@ -3,10 +3,24 @@ use std::{
     collections::{BinaryHeap, VecDeque},
 };
 
-pub trait PriorityQueue<P, T> {
+pub trait Priority
+where
+    Self: Ord,
+{
+    const FIRST: Self;
+    const LAST: Self;
+}
+
+impl Priority for usize {
+    const FIRST: Self = usize::MIN;
+    const LAST: Self = usize::MAX;
+}
+
+pub trait Queue<T> {
+    type Priority: Priority;
     fn new() -> Self;
-    fn add(&mut self, priority: P, item: T);
-    fn next(&mut self) -> Option<(P, T)>;
+    fn add(&mut self, priority: Self::Priority, item: T);
+    fn next(&mut self) -> Option<(Self::Priority, T)>;
     fn len(&self) -> usize;
 }
 
@@ -16,7 +30,9 @@ pub struct SlidingBucketQueue<const R: usize, T> {
     pub queue: VecDeque<Vec<T>>,
 }
 
-impl<const R: usize, T: Clone> PriorityQueue<usize, T> for SlidingBucketQueue<R, T> {
+impl<const R: usize, T: Clone> Queue<T> for SlidingBucketQueue<R, T> {
+    type Priority = usize;
+
     fn new() -> Self {
         Self {
             offset: 0,
@@ -74,7 +90,9 @@ impl<T: std::fmt::Debug> RadixHeap<T> {
     }
 }
 
-impl<T> PriorityQueue<usize, T> for RadixHeap<T> {
+impl<T> Queue<T> for RadixHeap<T> {
+    type Priority = usize;
+
     fn new() -> Self {
         Self {
             bottom: 0,
@@ -120,16 +138,18 @@ impl<T> PriorityQueue<usize, T> for RadixHeap<T> {
     }
 }
 
-impl<T> PriorityQueue<usize, T> for BinaryHeap<Reverse<KVPair<usize, T>>> {
+impl<P: Priority, T> Queue<T> for BinaryHeap<Reverse<KVPair<P, T>>> {
+    type Priority = P;
+
     fn new() -> Self {
         BinaryHeap::new()
     }
 
-    fn add(&mut self, priority: usize, item: T) {
+    fn add(&mut self, priority: P, item: T) {
         self.push(Reverse(KVPair::new(priority, item)));
     }
 
-    fn next(&mut self) -> Option<(usize, T)> {
+    fn next(&mut self) -> Option<(P, T)> {
         self.pop().map(|entry| KVPair::extract(entry.0))
     }
 

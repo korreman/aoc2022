@@ -81,15 +81,6 @@ impl<T> RadixHeap<T> {
     }
 }
 
-impl<T: std::fmt::Debug> RadixHeap<T> {
-    fn print(&self) {
-        println!(
-            "Last deleted: {:?}\nLowest bucket: {:?}\nBuckets:\n{:?}",
-            self.bottom, self.lowest_nonempty, self.buckets
-        );
-    }
-}
-
 impl<T> Queue<T> for RadixHeap<T> {
     type Priority = usize;
 

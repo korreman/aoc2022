@@ -26,6 +26,7 @@ fn main() {
     state.run_day(15, &solutions::day15::run, "input/day15.txt");
     state.run_day(16, &solutions::day16::run, "input/day16.txt");
     state.run_day(17, &solutions::day17::run, "input/day17.txt");
+    state.run_day(18, &solutions::day18::run, "input/day18.txt");
 
     state.print();
     println!("{day10part2:?}");

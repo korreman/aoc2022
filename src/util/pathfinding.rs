@@ -1,17 +1,19 @@
 use crate::util::{graph::Graph, queue::Queue};
 use std::mem::swap;
 
-pub fn bfs<T, G>(
+/// Breadth-first search on a graph structure.
+/// The `is_target` closure is guaranteed to be called at most once per cell.
+/// If no solution is found, is_target is guaranteed to be called on all reachable cells.
+pub fn bfs<T, G: Graph<T>>(
     graph: &G,
     start: G::Handle,
     valid_neighbor: impl Fn(G::Handle, G::Handle) -> bool,
     mut is_target: impl FnMut(usize, G::Handle) -> bool,
-) -> Option<usize>
-where
-    G: Graph<T>,
-{
+) -> (Option<usize>, G::Map<bool>) {
     let mut visited = graph.map(|_| false);
     let mut handles = Vec::new();
+
+    visited[start] = true;
     handles.push(start);
 
     let mut off_handles = Vec::new();
@@ -20,7 +22,7 @@ where
         swap(&mut handles, &mut off_handles);
         for h in off_handles.drain(..) {
             if is_target(c, h) {
-                return Some(c);
+                return (Some(c), visited);
             }
             for n in graph.neighbors(h) {
                 if valid_neighbor(h, n) && !visited[n] {
@@ -31,7 +33,7 @@ where
         }
         c += 1;
     }
-    None
+    (None, visited)
 }
 
 pub fn dijkstra<T, G, Q>(

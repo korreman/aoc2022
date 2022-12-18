@@ -15,7 +15,7 @@ pub fn run(input: &str) -> (usize, usize) {
     });
 
     let mut res2 = None;
-    let res1 = bfs(
+    let (res1, _) = bfs(
         &grid,
         end,
         |p, n| grid[p] as i16 - grid[n] as i16 <= 1,

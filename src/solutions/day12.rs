@@ -15,17 +15,14 @@ pub fn run(input: &str) -> (usize, usize) {
     });
 
     let mut res2 = None;
-    let (res1, _) = bfs(
-        &grid,
-        end,
-        |p, n| grid[p] as i16 - grid[n] as i16 <= 1,
-        |c, p| {
-            if grid[p] == 0 && res2.is_none() {
-                res2 = Some(c);
-            }
-            p == start
-        },
-    );
+    let valid_neighbor = |p, n| grid[p] as i16 - grid[n] as i16 <= 1;
+    let cost = |c, p| {
+        if grid[p] == 0 && res2.is_none() {
+            res2 = Some(c);
+        }
+        p == start
+    };
+    let res1 = bfs(&grid, end, valid_neighbor, cost);
     (res1.unwrap(), res2.unwrap())
 }
 

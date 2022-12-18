@@ -1,4 +1,4 @@
-use crate::util::graph::{Graph, VecGraph};
+use crate::util::graph::{GraphImpl, VecGraph};
 use itertools::Itertools;
 
 #[derive(Debug)]

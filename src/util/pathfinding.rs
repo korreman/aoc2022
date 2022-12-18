@@ -1,16 +1,16 @@
 use crate::util::{graph::Graph, queue::Queue};
 use std::mem::swap;
 
-use super::graph::GraphInner;
-
-pub fn bfs<T, G: Graph>(
-    _graph_type: G,
-    graph: &G::Graph<T>,
+pub fn bfs<T, G>(
+    graph: &G,
     start: G::Handle,
     valid_neighbor: impl Fn(G::Handle, G::Handle) -> bool,
     mut is_target: impl FnMut(usize, G::Handle) -> bool,
-) -> Option<usize> {
-    let mut visited = G::map(graph, |_| false);
+) -> Option<usize>
+where
+    G: Graph<T>,
+{
+    let mut visited = graph.map(|_| false);
     let mut handles = Vec::new();
     handles.push(start);
 
@@ -35,16 +35,16 @@ pub fn bfs<T, G: Graph>(
 }
 
 pub fn dijkstra<T, G, Q>(
-    graph: &G::Graph<T>,
+    graph: &G,
     cost: impl Fn(G::Handle, G::Handle) -> Option<usize>,
     mut is_target: impl FnMut(usize, G::Handle) -> bool,
     start: G::Handle,
 ) -> Option<usize>
 where
-    G: Graph,
+    G: Graph<T>,
     Q: Queue<G::Handle, Priority = usize>,
 {
-    let mut costs: G::Graph<usize> = G::map(graph, |_| usize::MAX);
+    let mut costs = graph.map(|_| usize::MAX);
     let mut queue = Q::new();
 
     costs[start] = 0;
@@ -76,17 +76,17 @@ where
 /// It must never exceed the actual cost of the shortest path,
 /// or the optimal path might be forgotten.
 pub fn a_star<T, G, Q>(
-    graph: &G::Graph<T>,
+    graph: &G,
     cost: impl Fn(G::Handle, G::Handle) -> Option<usize>,
     heuristic: impl Fn(G::Handle) -> usize,
     mut is_target: impl FnMut(usize, G::Handle) -> bool,
     start: G::Handle,
 ) -> Option<usize>
 where
-    G: Graph,
+    G: Graph<T>,
     Q: Queue<G::Handle, Priority = usize>,
 {
-    let mut costs: G::Graph<usize> = G::map(graph, |_| usize::MAX);
+    let mut costs = graph.map(|_| usize::MAX);
     let mut queue = Q::new();
 
     costs[start] = 0;

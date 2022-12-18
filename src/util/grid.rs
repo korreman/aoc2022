@@ -3,7 +3,7 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-use crate::util::graph::{Graph, GraphInner};
+use crate::util::graph::{Graph, GraphImpl};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Pos {
@@ -161,36 +161,32 @@ impl<T> Grid<T> {
     }
 }
 
-pub struct GridGraph;
-impl Graph for GridGraph {
+impl<T> Graph<T> for Grid<T> {}
+impl<T> GraphImpl<T> for Grid<T> {
     type Handle = Pos;
 
-    type Graph<T> = Grid<T>;
-
-    fn map<T, U, F: FnMut(&T) -> U>(graph: &Self::Graph<T>, mut f: F) -> Self::Graph<U> {
-        let mut data = Vec::with_capacity(graph.width * graph.height);
-        for y in 0..graph.height {
-            for x in 0..graph.width {
-                data.push(f(&graph[pos(x, y)]));
-            }
-        }
-        Grid {
-            data,
-            width: graph.width,
-            height: graph.height,
-        }
-    }
-}
-
-impl<T> GraphInner<Pos, T> for Grid<T> {
     type Neighbors = Neighbors;
-
     fn neighbors(&self, handle: Pos) -> Self::Neighbors {
         Neighbors {
             center: handle,
             width: self.width,
             height: self.height,
             state: 0,
+        }
+    }
+
+    type Map<U> = Grid<U>;
+    fn map<U, F: FnMut(&T) -> U>(&self, mut f: F) -> Self::Map<U> {
+        let mut data = Vec::with_capacity(self.width * self.height);
+        for y in 0..self.height {
+            for x in 0..self.width {
+                data.push(f(&self[pos(x, y)]));
+            }
+        }
+        Grid {
+            data,
+            width: self.width,
+            height: self.height,
         }
     }
 }

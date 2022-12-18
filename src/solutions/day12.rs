@@ -1,5 +1,5 @@
 use crate::util::{
-    grid::{Grid, GridGraph, Pos},
+    grid::{Grid, Pos},
     pathfinding::bfs,
 };
 
@@ -16,7 +16,6 @@ pub fn run(input: &str) -> (usize, usize) {
 
     let mut res2 = None;
     let res1 = bfs(
-        GridGraph,
         &grid,
         end,
         |p, n| grid[p] as i16 - grid[n] as i16 <= 1,

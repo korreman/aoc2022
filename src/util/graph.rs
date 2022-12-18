@@ -1,28 +1,27 @@
 use std::ops::{Index, IndexMut};
 
-/// A graph with immutable structure, but mutable node values.
-/// This is an outer trait that allows paramterization over the node data type.
-pub trait Graph {
+/// A graph with immutable structure but mutable node values.
+pub trait Graph<T> where Self: GraphImpl<T, Map<T> = Self> {}
+
+/// Actual implementation of the graph class.
+pub trait GraphImpl<T>
+where
+    Self: Index<Self::Handle, Output = T> + IndexMut<Self::Handle, Output = T>,
+{
     /// A reference to a node in a graph.
     /// This should index the equivalent node between mapped graphs.
     type Handle: Copy;
-    /// The graph type, parameterized over the node data `T`.
-    type Graph<T>: GraphInner<Self::Handle, T>;
+
+    /// An iterator over neighboring nodes.
+    type Neighbors: Iterator<Item = Self::Handle>;
+    /// Get the neighbors for `handle` in the graph.
+    fn neighbors(&self, handle: Self::Handle) -> Self::Neighbors;
+
+    /// Result of mapping, should be the type itself.
+    type Map<U>: GraphImpl<U, Handle = Self::Handle>;
     /// Mapping function, creates a new graph with the exact same structure.
-    fn map<T, U, F: FnMut(&T) -> U>(graph: &Self::Graph<T>, f: F) -> Self::Graph<U>;
+    fn map<U, F: FnMut(&T) -> U>(&self, f: F) -> Self::Map<U>;
 }
-
-/// The actual (inner) graph type of a [Graph].
-pub trait GraphInner<H, T>
-where
-    Self: Index<H, Output = T> + IndexMut<H, Output = T>,
-{
-    /// An iterator over neighboring nodes to some handle.
-    type Neighbors: Iterator<Item = H>;
-    /// Get the neighbors for handle `H`.
-    fn neighbors(&self, handle: H) -> Self::Neighbors;
-}
-
 
 /// An index graph backed by a `Vec`.
 pub struct VecGraph<T> {
@@ -63,21 +62,18 @@ impl<T> IndexMut<usize> for VecGraph<T> {
     }
 }
 
-impl<T> GraphInner<usize, T> for VecGraph<T> {
-    type Neighbors = std::vec::IntoIter<usize>;
+impl<T> Graph<T> for VecGraph<T> {}
+impl<T> GraphImpl<T> for VecGraph<T> {
+    type Handle = usize;
 
+    type Neighbors = std::vec::IntoIter<usize>;
     fn neighbors(&self, handle: usize) -> Self::Neighbors {
         self.data[handle].neighbors.clone().into_iter()
     }
-}
 
-impl<X> Graph for VecGraph<X> {
-    type Handle = usize;
-
-    type Graph<T> = VecGraph<T>;
-
-    fn map<T, U, F: FnMut(&T) -> U>(graph: &Self::Graph<T>, mut f: F) -> Self::Graph<U> {
-        let data = graph
+    type Map<U> = VecGraph<U>;
+    fn map<U, F: FnMut(&T) -> U>(&self, mut f: F) -> Self::Map<U> {
+        let data = self
             .data
             .iter()
             .map(|node| {

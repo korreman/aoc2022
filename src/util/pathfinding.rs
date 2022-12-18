@@ -9,7 +9,7 @@ pub fn bfs<T, G: Graph<T>>(
     start: G::Handle,
     valid_neighbor: impl Fn(G::Handle, G::Handle) -> bool,
     mut is_target: impl FnMut(usize, G::Handle) -> bool,
-) -> (Option<usize>, G::Map<bool>) {
+) -> Option<usize> {
     let mut visited = graph.map(|_| false);
     let mut handles = Vec::new();
 
@@ -22,7 +22,7 @@ pub fn bfs<T, G: Graph<T>>(
         swap(&mut handles, &mut off_handles);
         for h in off_handles.drain(..) {
             if is_target(c, h) {
-                return (Some(c), visited);
+                return Some(c);
             }
             for n in graph.neighbors(h) {
                 if valid_neighbor(h, n) && !visited[n] {
@@ -33,7 +33,7 @@ pub fn bfs<T, G: Graph<T>>(
         }
         c += 1;
     }
-    (None, visited)
+    None
 }
 
 pub fn dijkstra<T, G, Q>(

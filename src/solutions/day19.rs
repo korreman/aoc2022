@@ -148,6 +148,12 @@ impl Blueprint {
             inventory: Default::default(),
             robots: Currency::ore(1),
         });
+        let max_costs: Currency = self
+            .transactions()
+            .iter()
+            .map(|t| t.cost)
+            .reduce(Currency::max_merge)
+            .unwrap();
         for minute in 1..=minutes {
             for state in &states {
                 if state.inventory.ge(&self.geode) {
@@ -173,12 +179,6 @@ impl Blueprint {
             swap(&mut states, &mut off_states);
             off_states.clear();
             states.retain(|State { robots, .. }| {
-                let max_costs: Currency = self
-                    .transactions()
-                    .iter()
-                    .map(|t| t.cost)
-                    .reduce(Currency::max_merge)
-                    .unwrap();
                 max_costs.ge(robots)
             });
         }

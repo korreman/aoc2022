@@ -1,39 +1,39 @@
 use std::{
-    collections::HashSet,
     mem::swap,
     ops::{Add, Sub},
 };
 
+use fxhash::FxHashSet;
 use itertools::Itertools;
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Default)]
 struct Currency {
-    ore: u16,
-    clay: u16,
-    obsidian: u16,
-    geode: u16,
+    ore: u8,
+    clay: u8,
+    obsidian: u8,
+    geode: u8,
 }
 
 impl Currency {
-    fn ore(count: u16) -> Self {
+    fn ore(count: u8) -> Self {
         Self {
             ore: count,
             ..Default::default()
         }
     }
-    fn clay(count: u16) -> Self {
+    fn clay(count: u8) -> Self {
         Self {
             clay: count,
             ..Default::default()
         }
     }
-    fn obsidian(count: u16) -> Self {
+    fn obsidian(count: u8) -> Self {
         Self {
             obsidian: count,
             ..Default::default()
         }
     }
-    fn geode(count: u16) -> Self {
+    fn geode(count: u8) -> Self {
         Self {
             geode: count,
             ..Default::default()
@@ -41,7 +41,7 @@ impl Currency {
     }
 
     // ignores geodes
-    fn can_afford(&self, other: &Self) -> bool {
+    fn ge(&self, other: &Self) -> bool {
         self.ore >= other.ore && self.clay >= other.clay && self.obsidian >= other.obsidian
     }
 
@@ -152,17 +152,16 @@ impl Blueprint {
         ]
     }
 
-    fn simulate(&mut self, minutes: usize) -> HashSet<State> {
-        let mut states: HashSet<State> = HashSet::new();
-        let mut off_states = HashSet::new();
+    fn simulate(&mut self, minutes: usize) -> FxHashSet<State> {
+        let mut states = FxHashSet::default();
+        let mut off_states = FxHashSet::default();
         states.insert(State {
             inventory: Default::default(),
             robots: Currency::ore(1),
         });
         for minute in 1..=minutes {
-            println!("Minute {minute}");
             for state in &states {
-                if state.inventory.can_afford(&self.geode) {
+                if state.inventory.ge(&self.geode) {
                     off_states.insert(State {
                         inventory: state.inventory - self.geode + state.robots,
                         robots: state.robots + Currency::geode(1),
@@ -173,7 +172,7 @@ impl Blueprint {
                         robots: state.robots,
                     });
                     for transaction in self.transactions() {
-                        if state.inventory.can_afford(&transaction.cost) {
+                        if state.inventory.ge(&transaction.cost) {
                             off_states.insert(State {
                                 inventory: state.inventory - transaction.cost + state.robots,
                                 robots: state.robots + transaction.gain,
@@ -184,7 +183,6 @@ impl Blueprint {
             }
             swap(&mut states, &mut off_states);
             off_states.clear();
-            let pre_len = states.len();
             states.retain(|State { robots, .. }| {
                 let max_costs: Currency = self
                     .transactions()
@@ -192,12 +190,8 @@ impl Blueprint {
                     .map(|t| t.cost)
                     .reduce(Currency::max_merge)
                     .unwrap();
-                max_costs.can_afford(robots)
+                max_costs.ge(robots)
             });
-            println!(
-                "Culled {:.1}% of states",
-                (pre_len - states.len()) as f32 / states.len() as f32
-            );
         }
         states
     }
@@ -217,7 +211,6 @@ pub fn run(input: &str) -> (u64, u64) {
 
     let mut res1 = 0;
     for blueprint in &mut blueprints {
-        println!("Blueprint {}", blueprint.id);
         let states = blueprint.simulate(24);
         let max_geodes = states
             .iter()
@@ -227,11 +220,9 @@ pub fn run(input: &str) -> (u64, u64) {
         res1 += max_geodes as u64 * blueprint.id;
     }
 
-    println!("Part 2 reached");
     let mut res2 = 1;
     let upper = blueprints.len().min(3);
     for blueprint in &mut blueprints[0..upper] {
-        println!("Blueprint {}", blueprint.id);
         let states = blueprint.simulate(32);
         let max_geodes = states
             .iter()

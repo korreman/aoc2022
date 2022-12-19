@@ -98,7 +98,7 @@ struct Transaction {
 
 #[derive(Debug, Clone, Copy)]
 struct Blueprint {
-    id: u64,
+    id: u8,
     ore: Currency,
     clay: Currency,
     obsidian: Currency,
@@ -107,21 +107,10 @@ struct Blueprint {
 
 impl Blueprint {
     fn parse(line: &str) -> Option<Self> {
-        let words = line.split([' ', ':']);
-        let mut words = words.skip(1);
-        let id = words.next()?.parse().ok()?;
-        let mut words = words.skip(5);
-        let ore = words.next()?.parse().ok()?;
-        let mut words = words.skip(5);
-        let clay = words.next()?.parse().ok()?;
-        let mut words = words.skip(5);
-        let obsidian_ore = words.next()?.parse().ok()?;
-        let mut words = words.skip(2);
-        let obsidian_clay = words.next()?.parse().ok()?;
-        let mut words = words.skip(5);
-        let geode_ore = words.next()?.parse().ok()?;
-        let mut words = words.skip(2);
-        let geode_obsidian = words.next()?.parse().ok()?;
+        let (id, ore, clay, obsidian_ore, obsidian_clay, geode_ore, geode_obsidian) = line
+            .split([' ', ':'])
+            .filter_map(|x| x.parse().ok())
+            .collect_tuple()?;
         Some(Blueprint {
             id,
             ore: Currency::ore(ore),
@@ -217,7 +206,7 @@ pub fn run(input: &str) -> (u64, u64) {
             .map(|state| state.inventory.geode)
             .max()
             .unwrap();
-        res1 += max_geodes as u64 * blueprint.id;
+        res1 += max_geodes as u64 * blueprint.id as u64;
     }
 
     let mut res2 = 1;

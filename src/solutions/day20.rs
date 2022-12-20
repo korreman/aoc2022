@@ -1,58 +1,45 @@
+use itertools::Itertools;
 use std::collections::VecDeque;
 
-pub fn run(input: &str) -> (i32, i64) {
+pub fn run(input: &str) -> (usize, usize) {
     // parse
-    let numbers: Vec<i32> = input
+    let numbers: Vec<i64> = input
         .lines()
-        .map(|word| word.parse::<i32>().unwrap())
+        .map(|word| word.parse::<i64>().unwrap())
         .collect();
+    let decrypted_numbers = numbers.iter().map(|&n| n * 811589153).collect_vec();
 
-    // part 1
-    let mut state: VecDeque<(usize, i32)> = numbers.iter().cloned().enumerate().collect();
-    for i in 0..numbers.len() {
-        while state[0].0 != i {
-            state.rotate_left(1);
-        }
-        let (id, rotation) = state.pop_front().unwrap();
-        let offset = rotation.rem_euclid(state.len() as i32) as usize;
-        state.rotate_left(offset);
-        state.push_front((id, rotation));
-    }
-    while state[0].1 != 0 {
-        state.rotate_left(1);
-    }
-    let res1 = [1000, 2000, 3000]
-        .iter()
-        .map(|n| state[(n) % state.len()].1)
-        .sum();
+    let res1 = task(numbers.as_slice(), 1);
+    let res2 = task(decrypted_numbers.as_slice(), 10);
+    (res1, res2)
+}
 
-    // part 2
-    let mut state: VecDeque<(usize, i64)> = numbers
+fn task(numbers: &[i64], times: usize) -> usize {
+    let mut state: VecDeque<(usize, usize)> = numbers
         .iter()
-        .cloned()
-        .map(|n| (n as i64) * 811589153)
+        .map(|n| n.rem_euclid((numbers.len() - 1) as i64) as usize)
         .enumerate()
         .collect();
-    for _ in 0..10 {
+    for _ in 0..times {
         for i in 0..numbers.len() {
             while state[0].0 != i {
                 state.rotate_left(1);
             }
             let (id, rotation) = state.pop_front().unwrap();
-            let offset = rotation.rem_euclid(state.len() as i64) as usize;
-            state.rotate_left(offset);
-            state.push_front((id, rotation));
+            state.insert(rotation, (id, rotation));
+            //println!(
+            //    "{:?}",
+            //    state.iter().map(|(idx, _)| numbers[*idx]).collect_vec()
+            //);
         }
     }
     while state[0].1 != 0 {
         state.rotate_left(1);
     }
-    let res2 = [1000, 2000, 3000]
+    [1000, 2000, 3000]
         .iter()
-        .map(|n| state[(n) % state.len()].1)
-        .sum();
-
-    (res1, res2)
+        .map(|n| numbers[state[n % state.len()].0])
+        .sum::<i64>() as usize
 }
 
 #[cfg(test)]

@@ -34,15 +34,17 @@ struct VecGraphEntry<T> {
     neighbors: Vec<usize>,
 }
 
-impl<T> VecGraph<T> {
-    /// Generates a new graph from a list of nodes and their neighbor indices.
-    pub fn new(nodes: Vec<(T, Vec<usize>)>) -> Self {
+impl<N, X> FromIterator<(N, X)> for VecGraph<X>
+where
+    N: Iterator<Item = usize>,
+{
+    fn from_iter<T: IntoIterator<Item = (N, X)>>(iter: T) -> Self {
         Self {
-            data: nodes
+            data: iter
                 .into_iter()
-                .map(|(v, ns)| VecGraphEntry {
+                .map(|(ns, v)| VecGraphEntry {
                     value: v,
-                    neighbors: ns,
+                    neighbors: ns.collect(),
                 })
                 .collect(),
         }
@@ -88,36 +90,18 @@ impl<T> GraphImpl<T> for VecGraph<T> {
     }
 }
 
-struct HashGraphEntry<H: Copy + PartialEq + Eq + std::hash::Hash, T> {
-    value: T,
-    neighbors: Vec<H>,
-}
-
-impl<H: Copy + PartialEq + Eq + std::hash::Hash, T> HashGraph<H, T> {
-    /// Generates a new graph from a list of nodes and their neighbor indices.
-    pub fn new(nodes: Vec<(H, T, Vec<H>)>) -> Self {
-        Self {
-            data: nodes
-                .into_iter()
-                .map(|(h, v, ns)| {
-                    let data = HashGraphEntry {
-                        value: v,
-                        neighbors: ns,
-                    };
-                    (h, data)
-                })
-                .collect(),
-        }
-    }
-
-    pub fn to_vec_graph(self) -> VecGraph<T> {
-        let indices: FxHashMap<H, usize> = self
+impl<H, T> From<HashGraph<H, T>> for VecGraph<T>
+where
+    H: Copy + PartialEq + Eq + std::hash::Hash,
+{
+    fn from(value: HashGraph<H, T>) -> Self {
+        let indices: FxHashMap<H, usize> = value
             .data
             .iter()
             .enumerate()
             .map(|(idx, (&h, _))| (h, idx))
             .collect();
-        let data = self
+        let data = value
             .data
             .into_iter()
             .map(|(_, entry)| VecGraphEntry {
@@ -129,26 +113,66 @@ impl<H: Copy + PartialEq + Eq + std::hash::Hash, T> HashGraph<H, T> {
     }
 }
 
+struct HashGraphEntry<H, T>
+where
+    H: Copy + PartialEq + Eq + std::hash::Hash,
+{
+    value: T,
+    neighbors: Vec<H>,
+}
+
+impl<H, N, X> FromIterator<(H, N, X)> for HashGraph<H, X>
+where
+    H: Copy + PartialEq + Eq + std::hash::Hash,
+    N: Iterator<Item = H>,
+{
+    fn from_iter<T: IntoIterator<Item = (H, N, X)>>(iter: T) -> Self {
+        let data: FxHashMap<H, HashGraphEntry<H, X>> = iter
+            .into_iter()
+            .map(|(h, n, x)| {
+                let entry = HashGraphEntry {
+                    value: x,
+                    neighbors: n.collect(),
+                };
+                (h, entry)
+            })
+            .collect();
+        Self { data }
+    }
+}
+
 /// A graph backed by a hashmap.
-pub struct HashGraph<H: Copy + PartialEq + Eq + std::hash::Hash, T> {
+pub struct HashGraph<H, T>
+where
+    H: Copy + PartialEq + Eq + std::hash::Hash,
+{
     data: FxHashMap<H, HashGraphEntry<H, T>>,
 }
 
-impl<H: Copy + PartialEq + Eq + std::hash::Hash, T> Index<H> for HashGraph<H, T> {
+impl<H, T> Index<H> for HashGraph<H, T>
+where
+    H: Copy + PartialEq + Eq + std::hash::Hash,
+{
     type Output = T;
     fn index(&self, index: H) -> &Self::Output {
         &self.data[&index].value
     }
 }
 
-impl<H: Copy + PartialEq + Eq + std::hash::Hash, T> IndexMut<H> for HashGraph<H, T> {
+impl<H, T> IndexMut<H> for HashGraph<H, T>
+where
+    H: Copy + PartialEq + Eq + std::hash::Hash,
+{
     fn index_mut(&mut self, index: H) -> &mut Self::Output {
         &mut self.data.get_mut(&index).unwrap().value
     }
 }
 
-impl<H: Copy + PartialEq + Eq + std::hash::Hash, T> Graph<T> for HashGraph<H, T> {}
-impl<H: Copy + PartialEq + Eq + std::hash::Hash, T> GraphImpl<T> for HashGraph<H, T> {
+impl<H, T> Graph<T> for HashGraph<H, T> where H: Copy + PartialEq + Eq + std::hash::Hash {}
+impl<H, T> GraphImpl<T> for HashGraph<H, T>
+where
+    H: Copy + PartialEq + Eq + std::hash::Hash,
+{
     type Handle = H;
 
     type Neighbors = std::vec::IntoIter<H>;

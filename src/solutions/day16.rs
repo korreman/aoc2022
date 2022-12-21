@@ -23,7 +23,7 @@ impl<'a> PValve<'a> {
         })
     }
 
-    fn transform_handles(pvalves: &[PValve]) -> Vec<(u64, Vec<usize>)> {
+    fn transform_handles(pvalves: &[PValve]) -> Vec<(Vec<usize>, u64)> {
         let transform = |pvalve: &PValve| {
             let tunnels = pvalve
                 .tunnels
@@ -35,7 +35,7 @@ impl<'a> PValve<'a> {
                         .unwrap()
                 })
                 .collect_vec();
-            (pvalve.flow, tunnels)
+            (tunnels, pvalve.flow)
         };
         pvalves.iter().map(transform).collect_vec()
     }
@@ -47,7 +47,10 @@ pub fn run<'a>(input: &'a str) -> (u64, usize) {
         .lines()
         .map(|l| PValve::parse(l).unwrap())
         .collect_vec();
-    let valves = VecGraph::new(PValve::transform_handles(valves.as_slice()));
+    let valves: VecGraph<u64> = PValve::transform_handles(valves.as_slice())
+        .into_iter()
+        .map(|(ns, v)| (ns.into_iter(), v))
+        .collect();
     let mut start = 0;
 
     // Alright, strategy time.

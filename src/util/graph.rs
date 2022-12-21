@@ -93,6 +93,42 @@ struct HashGraphEntry<H: Copy + PartialEq + Eq + std::hash::Hash, T> {
     neighbors: Vec<H>,
 }
 
+impl<H: Copy + PartialEq + Eq + std::hash::Hash, T> HashGraph<H, T> {
+    /// Generates a new graph from a list of nodes and their neighbor indices.
+    pub fn new(nodes: Vec<(H, T, Vec<H>)>) -> Self {
+        Self {
+            data: nodes
+                .into_iter()
+                .map(|(h, v, ns)| {
+                    let data = HashGraphEntry {
+                        value: v,
+                        neighbors: ns,
+                    };
+                    (h, data)
+                })
+                .collect(),
+        }
+    }
+
+    pub fn to_vec_graph(self) -> VecGraph<T> {
+        let indices: FxHashMap<H, usize> = self
+            .data
+            .iter()
+            .enumerate()
+            .map(|(idx, (&h, _))| (h, idx))
+            .collect();
+        let data = self
+            .data
+            .into_iter()
+            .map(|(_, entry)| VecGraphEntry {
+                value: entry.value,
+                neighbors: entry.neighbors.iter().map(|h| indices[h]).collect(),
+            })
+            .collect();
+        VecGraph { data }
+    }
+}
+
 /// A graph backed by a hashmap.
 pub struct HashGraph<H: Copy + PartialEq + Eq + std::hash::Hash, T> {
     data: FxHashMap<H, HashGraphEntry<H, T>>,

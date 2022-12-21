@@ -1,7 +1,8 @@
+use fxhash::FxHashMap;
 use std::ops::{Index, IndexMut};
 
 /// A graph with immutable structure but mutable node values.
-pub trait Graph<T> where Self: GraphImpl<T, Map<T> = Self> {}
+#[rustfmt::skip] pub trait Graph<T> where Self: GraphImpl<T, Map<T> = Self> {}
 
 /// Actual implementation of the graph class.
 pub trait GraphImpl<T>
@@ -50,7 +51,6 @@ impl<T> VecGraph<T> {
 
 impl<T> Index<usize> for VecGraph<T> {
     type Output = T;
-
     fn index(&self, index: usize) -> &Self::Output {
         &self.data[index].value
     }
@@ -85,5 +85,54 @@ impl<T> GraphImpl<T> for VecGraph<T> {
             })
             .collect();
         VecGraph { data }
+    }
+}
+
+struct HashGraphEntry<H: Copy + PartialEq + Eq + std::hash::Hash, T> {
+    value: T,
+    neighbors: Vec<H>,
+}
+
+/// A graph backed by a hashmap.
+pub struct HashGraph<H: Copy + PartialEq + Eq + std::hash::Hash, T> {
+    data: FxHashMap<H, HashGraphEntry<H, T>>,
+}
+
+impl<H: Copy + PartialEq + Eq + std::hash::Hash, T> Index<H> for HashGraph<H, T> {
+    type Output = T;
+    fn index(&self, index: H) -> &Self::Output {
+        &self.data[&index].value
+    }
+}
+
+impl<H: Copy + PartialEq + Eq + std::hash::Hash, T> IndexMut<H> for HashGraph<H, T> {
+    fn index_mut(&mut self, index: H) -> &mut Self::Output {
+        &mut self.data.get_mut(&index).unwrap().value
+    }
+}
+
+impl<H: Copy + PartialEq + Eq + std::hash::Hash, T> Graph<T> for HashGraph<H, T> {}
+impl<H: Copy + PartialEq + Eq + std::hash::Hash, T> GraphImpl<T> for HashGraph<H, T> {
+    type Handle = H;
+
+    type Neighbors = std::vec::IntoIter<H>;
+    fn neighbors(&self, handle: H) -> Self::Neighbors {
+        self.data[&handle].neighbors.clone().into_iter()
+    }
+
+    type Map<U> = HashGraph<H, U>;
+    fn map<U, F: FnMut(&T) -> U>(&self, mut f: F) -> Self::Map<U> {
+        let data = self
+            .data
+            .iter()
+            .map(|(handle, node)| {
+                let entry = HashGraphEntry {
+                    value: f(&node.value),
+                    neighbors: node.neighbors.clone(),
+                };
+                (*handle, entry)
+            })
+            .collect();
+        HashGraph { data }
     }
 }

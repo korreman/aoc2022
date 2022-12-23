@@ -118,6 +118,19 @@ impl<T> GraphImpl<T> for Grid<T> {
         }
     }
 
+    fn handles(&self) -> Self::AllHandles {
+        let mut res = Vec::new();
+        for z in 0..self.depth {
+            for y in 0..self.height {
+                for x in 0..self.width {
+                    res.push(pos(x, y, z));
+                }
+            }
+        }
+        res.into_iter()
+    }
+    type AllHandles = std::vec::IntoIter<Pos>;
+
     type Map<U> = Grid<U>;
     fn map<U, F: FnMut(&T) -> U>(&self, mut f: F) -> Self::Map<U> {
         let mut data = Vec::with_capacity(self.width * self.height);

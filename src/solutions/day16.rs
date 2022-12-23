@@ -58,7 +58,6 @@ pub fn run<'a>(input: &'a str) -> (u64, usize) {
     //
     // We can start by thinking about how to find a path that maximizes the sum of visited nodes.
     // Each node may only be visited once.
-    //
 
     (0, 0)
 }

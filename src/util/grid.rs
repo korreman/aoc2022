@@ -1,5 +1,6 @@
 use std::{
     fmt::{Display, Write},
+    iter::FlatMap,
     ops::{Index, IndexMut},
 };
 
@@ -165,7 +166,6 @@ impl<T> Graph<T> for Grid<T> {}
 impl<T> GraphImpl<T> for Grid<T> {
     type Handle = Pos;
 
-    type Neighbors = Neighbors;
     fn neighbors(&self, handle: Pos) -> Self::Neighbors {
         Neighbors {
             center: handle,
@@ -174,8 +174,19 @@ impl<T> GraphImpl<T> for Grid<T> {
             state: 0,
         }
     }
+    type Neighbors = Neighbors;
 
-    type Map<U> = Grid<U>;
+    fn handles(&self) -> Self::AllHandles {
+        let mut res = Vec::new();
+        for y in 0..self.height {
+            for x in 0..self.width {
+                res.push(pos(x, y));
+            }
+        }
+        res.into_iter()
+    }
+    type AllHandles = std::vec::IntoIter<Pos>;
+
     fn map<U, F: FnMut(&T) -> U>(&self, mut f: F) -> Self::Map<U> {
         let mut data = Vec::with_capacity(self.width * self.height);
         for y in 0..self.height {
@@ -189,6 +200,7 @@ impl<T> GraphImpl<T> for Grid<T> {
             height: self.height,
         }
     }
+    type Map<U> = Grid<U>;
 }
 
 impl<T: Display> Display for Grid<T> {

@@ -1,6 +1,5 @@
 use std::{
     fmt::{Display, Write},
-    iter::FlatMap,
     ops::{Index, IndexMut},
 };
 

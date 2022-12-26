@@ -1,8 +1,5 @@
 use fxhash::FxHashMap;
-use std::{
-    collections::hash_map::Keys,
-    ops::{Index, IndexMut, Range},
-};
+use std::ops::{Index, IndexMut, Range};
 
 /// A graph with immutable structure but mutable node values.
 #[rustfmt::skip] pub trait Graph<T> where Self: GraphImpl<T, Map<T> = Self> {}
@@ -31,10 +28,13 @@ where
 }
 
 /// An index graph backed by a `Vec`.
+#[derive(Clone)]
 pub struct VecGraph<T> {
+    pub start: usize,
     data: Vec<VecGraphEntry<T>>,
 }
 
+#[derive(Clone)]
 struct VecGraphEntry<T> {
     value: T,
     neighbors: Vec<usize>,
@@ -42,15 +42,16 @@ struct VecGraphEntry<T> {
 
 impl<N, X> FromIterator<(N, X)> for VecGraph<X>
 where
-    N: Iterator<Item = usize>,
+    N: IntoIterator<Item = usize>,
 {
     fn from_iter<T: IntoIterator<Item = (N, X)>>(iter: T) -> Self {
         Self {
+            start: 0,
             data: iter
                 .into_iter()
-                .map(|(ns, v)| VecGraphEntry {
+                .map(|(n, v)| VecGraphEntry {
                     value: v,
-                    neighbors: ns.collect(),
+                    neighbors: n.into_iter().collect(),
                 })
                 .collect(),
         }
@@ -96,7 +97,10 @@ impl<T> GraphImpl<T> for VecGraph<T> {
                 }
             })
             .collect();
-        VecGraph { data }
+        VecGraph {
+            start: self.start,
+            data,
+        }
     }
     type Map<U> = VecGraph<U>;
 }
@@ -112,6 +116,7 @@ where
             .enumerate()
             .map(|(idx, (&h, _))| (h, idx))
             .collect();
+        let start = indices[&value.start];
         let data = value
             .data
             .into_iter()
@@ -120,23 +125,26 @@ where
                 neighbors: entry.neighbors.iter().map(|h| indices[h]).collect(),
             })
             .collect();
-        VecGraph { data }
+        VecGraph { start, data }
     }
 }
 
+#[derive(Clone)]
 struct HashGraphEntry<H, T>
-where
-    H: Copy + PartialEq + Eq + std::hash::Hash,
+//where
+//    H: Copy + PartialEq + Eq + std::hash::Hash,
 {
     value: T,
     neighbors: Vec<H>,
 }
 
 /// A graph backed by a hashmap.
+#[derive(Clone)]
 pub struct HashGraph<H, T>
 where
     H: Copy + PartialEq + Eq + std::hash::Hash,
 {
+    pub start: H,
     data: FxHashMap<H, HashGraphEntry<H, T>>,
 }
 
@@ -146,8 +154,9 @@ where
     N: Iterator<Item = H>,
 {
     fn from_iter<T: IntoIterator<Item = (H, N, X)>>(iter: T) -> Self {
-        let data: FxHashMap<H, HashGraphEntry<H, X>> = iter
-            .into_iter()
+        let mut peekable = iter.into_iter().peekable();
+        let start = peekable.peek().expect("empty iterator").0;
+        let data: FxHashMap<H, HashGraphEntry<H, X>> = peekable
             .map(|(h, n, x)| {
                 let entry = HashGraphEntry {
                     value: x,
@@ -156,7 +165,7 @@ where
                 (h, entry)
             })
             .collect();
-        Self { data }
+        Self { start, data }
     }
 }
 
@@ -208,7 +217,10 @@ where
                 (*handle, entry)
             })
             .collect();
-        HashGraph { data }
+        HashGraph {
+            start: self.start,
+            data,
+        }
     }
     type Map<U> = HashGraph<H, U>;
 }

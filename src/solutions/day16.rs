@@ -208,8 +208,6 @@ pub fn run(input: &str) -> (u64, u64) {
         .position(|&x| x == valves.start)
         .unwrap();
 
-    println!("{cost_grid:3}");
-    println!("{}, {:?}", dfs_start, new_valves);
     let mut dfs_state1 = State1::new(&new_valves, &cost_grid, dfs_start);
     let mut dfs_state2 = State2::new(&new_valves, &cost_grid, dfs_start);
     let res1 = dfs_state1.dfs();

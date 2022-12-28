@@ -24,7 +24,7 @@ fn main() {
     state.run_day(13, &solutions::day13::run, "input/day13.txt");
     state.run_day(14, &solutions::day14::run, "input/day14.txt");
     state.run_day(15, &solutions::day15::run, "input/day15.txt");
-    state.run_day(16, &solutions::day16::run, "input/day16.txt");
+    //state.run_day(16, &solutions::day16::run, "input/day16.txt");
     state.run_day(17, &solutions::day17::run, "input/day17.txt");
     state.run_day(18, &solutions::day18::run, "input/day18.txt");
     //state.run_day(19, &solutions::day19::run, "input/day19.txt");

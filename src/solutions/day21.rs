@@ -1,5 +1,9 @@
+use std::collections::VecDeque;
+
 use fxhash::FxHashMap;
 use itertools::Itertools;
+
+use crate::util::graph::{GraphImpl, VecGraph};
 
 #[derive(Debug, Clone, Copy)]
 enum Op {
@@ -10,48 +14,45 @@ enum Op {
 }
 
 #[derive(Debug, Clone, Copy)]
-enum Computation {
-    Binop(Op, usize, usize),
+enum PExpr<'a> {
+    Binop(Op, &'a str, &'a str),
     Num(u64),
 }
 
-#[derive(Debug, Clone, Copy)]
-enum ParsedExpr<'a> {
-    Add(&'a str, &'a str),
-    Sub(&'a str, &'a str),
-    Mul(&'a str, &'a str),
-    Div(&'a str, &'a str),
-    Num(u64),
-}
-
-impl<'a> ParsedExpr<'a> {
+impl<'a> PExpr<'a> {
     fn binop(op: &'a str, a: &'a str, b: &'a str) -> Self {
         match op {
-            "+" => ParsedExpr::Add(a, b),
-            "-" => ParsedExpr::Sub(a, b),
-            "*" => ParsedExpr::Mul(a, b),
-            "/" => ParsedExpr::Div(a, b),
+            "+" => PExpr::Binop(Op::Add, a, b),
+            "-" => PExpr::Binop(Op::Sub, a, b),
+            "*" => PExpr::Binop(Op::Mul, a, b),
+            "/" => PExpr::Binop(Op::Div, a, b),
             _ => panic!(),
         }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-struct ParsedMonkey<'a> {
-    name: &'a str,
-    op: ParsedExpr<'a>,
+enum Expr {
+    Binop(Op, usize, usize),
+    Num(u64),
 }
 
-impl<'a> ParsedMonkey<'a> {
+#[derive(Debug, Clone, Copy)]
+struct PMonkey<'a> {
+    name: &'a str,
+    expr: PExpr<'a>,
+}
+
+impl<'a> PMonkey<'a> {
     fn parse(line: &'a str) -> Self {
         match line.split([' ', ':']).collect_vec().as_slice() {
-            [name, _, a, op, b] => ParsedMonkey {
+            [name, _, a, op, b] => PMonkey {
                 name,
-                op: ParsedExpr::binop(op, a, b),
+                expr: PExpr::binop(op, a, b),
             },
-            [name, _, num] => ParsedMonkey {
+            [name, _, num] => PMonkey {
                 name,
-                op: ParsedExpr::Num(num.parse().unwrap()),
+                expr: PExpr::Num(num.parse().unwrap()),
             },
             _ => panic!(),
         }
@@ -59,33 +60,32 @@ impl<'a> ParsedMonkey<'a> {
 }
 
 pub fn run(input: &str) -> (u64, u64) {
-    let monkeys = input.lines().map(ParsedMonkey::parse).collect_vec();
+    let monkeys = input.lines().map(PMonkey::parse).collect_vec();
     let indices: FxHashMap<&str, usize> = monkeys
         .iter()
         .enumerate()
         .map(|(a, b)| (b.name, a))
         .collect();
-    let ops = monkeys
+    let monkeys = monkeys
         .iter()
-        .map(|monkey| match monkey.op {
-            ParsedExpr::Add(a, b) => Computation::Binop(Op::Add, indices[a], indices[b]),
-            ParsedExpr::Sub(a, b) => Computation::Binop(Op::Sub, indices[a], indices[b]),
-            ParsedExpr::Mul(a, b) => Computation::Binop(Op::Mul, indices[a], indices[b]),
-            ParsedExpr::Div(a, b) => Computation::Binop(Op::Div, indices[a], indices[b]),
-            ParsedExpr::Num(n) => Computation::Num(n),
+        .map(|monkey| match monkey.expr {
+            PExpr::Binop(op, a, b) => Expr::Binop(op, indices[a], indices[b]),
+            PExpr::Num(n) => Expr::Num(n),
         })
         .collect_vec();
 
     // Part 1
-    let mut results = ops.iter().map(|_| None).collect_vec();
+    let mut results = monkeys.iter().map(|_| None).collect_vec();
+    let mut has_humn = monkeys.iter().map(|_| false).collect_vec();
+    has_humn[indices["humn"]] = true;
     let mut stack = vec![indices["root"]];
     while let Some(idx) = stack.pop() {
         if results[idx].is_some() {
             continue;
         }
-        let op = ops[idx];
+        let op = monkeys[idx];
         match op {
-            Computation::Binop(op, a, b) => {
+            Expr::Binop(op, a, b) => {
                 if let (Some(aa), Some(bb)) = (results[a], results[b]) {
                     results[idx] = match op {
                         Op::Add => Some(aa + bb),
@@ -93,23 +93,27 @@ pub fn run(input: &str) -> (u64, u64) {
                         Op::Mul => Some(aa * bb),
                         Op::Div => Some(aa / bb),
                     };
+                    has_humn[idx] = has_humn[a] || has_humn[b];
                 } else {
                     stack.push(idx);
                     stack.push(a);
                     stack.push(b);
                 }
             }
-            Computation::Num(n) => results[idx] = Some(n),
+            Expr::Num(n) => results[idx] = Some(n),
         }
     }
     let res1 = results[indices["root"]].unwrap();
 
     // Part 2
-    let (a, b) = match ops[indices["root"]] {
-        Computation::Binop(_, a, b) => (a, b),
+    let (a, b) = match monkeys[indices["root"]] {
+        Expr::Binop(_, a, b) => (a, b),
         _ => panic!(),
     };
-    let human = ops[indices["humn"]];
+    let human = monkeys[indices["humn"]];
+    println!("{}, {}", has_humn[a], has_humn[b]);
+    // Starting at humn, work your way up the expression DAG and build a series of modifications.
+    // When you reach either a or b, perform all those modifications in reverse on the opposite.
 
     (res1, 0)
 }

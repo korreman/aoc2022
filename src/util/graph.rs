@@ -40,6 +40,12 @@ struct VecGraphEntry<T> {
     neighbors: Vec<usize>,
 }
 
+impl<T> VecGraph<T> {
+    pub fn add_edge(&mut self, src: usize, dst: usize) {
+        self.data[src].neighbors.push(dst);
+    }
+}
+
 impl<N, X> FromIterator<(N, X)> for VecGraph<X>
 where
     N: IntoIterator<Item = usize>,

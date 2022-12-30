@@ -1,6 +1,6 @@
 use std::{
     fmt::{Display, Write},
-    ops::{Index, IndexMut},
+    ops::{Index, IndexMut, AddAssign},
 };
 
 use crate::util::graph::{Graph, GraphImpl};
@@ -34,6 +34,13 @@ impl Pos {
                 done: false,
             })
         }
+    }
+}
+
+impl AddAssign for Pos {
+    fn add_assign(&mut self, rhs: Self) {
+        self.x += rhs.x;
+        self.y += rhs.y;
     }
 }
 
@@ -80,6 +87,26 @@ impl<T: Clone> Grid<T> {
             width,
             height,
         }
+    }
+
+    pub fn parse_default<P>(input: &str, default: T, mut p: P) -> Self
+    where
+        P: FnMut(Pos, char) -> T,
+    {
+        let height = input.lines().count();
+        let width = input
+            .lines()
+            .map(|line| line.chars().count())
+            .max()
+            .unwrap();
+        let mut grid = Grid::new_filled(width, height, default);
+        for (y, line) in input.lines().enumerate() {
+            for (x, c) in line.chars().enumerate() {
+                let dst = pos(x, y);
+                grid[dst] = p(dst, c);
+            }
+        }
+        grid
     }
 }
 

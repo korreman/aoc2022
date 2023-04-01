@@ -1,6 +1,6 @@
 use std::{
     fmt::{Display, Write},
-    ops::{Index, IndexMut, AddAssign},
+    ops::{Add, AddAssign, Index, IndexMut},
 };
 
 use crate::util::graph::{Graph, GraphImpl};
@@ -41,6 +41,17 @@ impl AddAssign for Pos {
     fn add_assign(&mut self, rhs: Self) {
         self.x += rhs.x;
         self.y += rhs.y;
+    }
+}
+
+impl Add<Pos> for Pos {
+    type Output = Pos;
+
+    fn add(self, rhs: Pos) -> Self::Output {
+        Pos {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+        }
     }
 }
 
@@ -87,6 +98,16 @@ impl<T: Clone> Grid<T> {
             width,
             height,
         }
+    }
+
+    pub fn pad(&self, amount: usize, value: T) -> Self {
+        let mut result = Self::new_filled(self.width + amount * 2, self.height + amount * 2, value);
+        for x in 0..self.width {
+            for y in 0..self.height {
+                result[pos(x + amount, y + amount)] = self[pos(x, y)].clone();
+            }
+        }
+        result
     }
 
     pub fn parse_default<P>(input: &str, default: T, mut p: P) -> Self
@@ -275,13 +296,11 @@ impl Iterator for Neighbors {
                 } else {
                     false
                 }
+            } else if *x > 0 {
+                *x -= 1;
+                true
             } else {
-                if *x > 0 {
-                    *x -= 1;
-                    true
-                } else {
-                    false
-                }
+                false
             }
         };
         self.state += 1;

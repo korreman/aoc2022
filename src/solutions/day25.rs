@@ -33,7 +33,6 @@ fn print_snafu(mut number: i64) -> String {
 
 pub fn run(input: &str) -> (String, &'static str) {
     let sum: i64 = input.lines().map(read_snafu).sum();
-    println!("{sum}");
     let res1 = print_snafu(sum);
     (res1, "")
 }

@@ -5,7 +5,7 @@ use std::{
 
 use crate::util::graph::{Graph, GraphImpl};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Pos {
     pub x: usize,
     pub y: usize,
@@ -105,6 +105,16 @@ impl<T: Clone> Grid<T> {
         for x in 0..self.width {
             for y in 0..self.height {
                 result[pos(x + amount, y + amount)] = self[pos(x, y)].clone();
+            }
+        }
+        result
+    }
+
+    pub fn crop(&self, amount: usize, dummy: T) -> Self {
+        let mut result = Self::new_filled(self.width - amount * 2, self.height - amount * 2, dummy);
+        for x in 0..result.width {
+            for y in 0..result.height {
+                result[pos(x, y)] = self[pos(x + amount, y + amount)].clone();
             }
         }
         result

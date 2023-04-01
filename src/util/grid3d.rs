@@ -2,7 +2,7 @@ use std::ops::{Index, IndexMut};
 
 use crate::util::graph::{Graph, GraphImpl};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Pos {
     pub x: usize,
     pub y: usize,
@@ -53,7 +53,7 @@ impl<T> Grid<T> {
 
     pub fn get_mut(&mut self, p: Pos) -> Option<&mut T> {
         if p.x < self.width && p.y < self.height && p.z < self.depth {
-            Some(&mut self.data[p.x + self.width * (p.y + self.depth * p.z)])
+            Some(&mut self.data[p.x + self.width * (p.y + self.height * p.z)])
         } else {
             None
         }
@@ -65,6 +65,10 @@ impl<T> Grid<T> {
 
     pub fn height(&self) -> usize {
         self.height
+    }
+
+    pub fn depth(&self) -> usize {
+        self.depth
     }
 
     pub fn contains(&self, p: Pos) -> bool {

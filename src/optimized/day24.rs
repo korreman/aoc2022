@@ -3,66 +3,66 @@ use std::{
     ops::{BitAndAssign, BitOrAssign, Shl, Shr},
 };
 
-use itertools::{izip};
+use itertools::izip;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-struct Row100(u128);
+struct Row<const N: usize>(u128);
 
-impl BitAndAssign for Row100 {
+impl<const N: usize> BitAndAssign for Row<N> {
     fn bitand_assign(&mut self, rhs: Self) {
         self.0 &= rhs.0;
     }
 }
 
-impl BitOrAssign for Row100 {
+impl<const N: usize> BitOrAssign for Row<N> {
     fn bitor_assign(&mut self, rhs: Self) {
         self.0 |= rhs.0;
     }
 }
 
-impl Shl<usize> for Row100 {
-    type Output = Row100;
+impl<const N: usize> Shl<usize> for Row<N> {
+    type Output = Row<N>;
 
     fn shl(self, rhs: usize) -> Self::Output {
         Self(self.0 << rhs)
     }
 }
 
-impl Shr<usize> for Row100 {
-    type Output = Row100;
+impl<const N: usize> Shr<usize> for Row<N> {
+    type Output = Row<N>;
 
     fn shr(self, rhs: usize) -> Self::Output {
         Self(self.mask().0 >> rhs)
     }
 }
 
-impl Row100 {
+impl<const N: usize> Row<N> {
     fn mask(self) -> Self {
-        Self(self.0 & 0xF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF)
+        Self(self.0 & ((1 << N) - 1))
     }
 
     fn rotl(self, cnt: usize) -> Self {
-        Self(self.0 << cnt | self.0 >> (100 - cnt))
-    }
-
-    fn rotl_assign(&mut self) {
-        self.0 = self.0 << 1 | self.0 >> 99
+        Self(self.0 << cnt | self.0 >> (N - cnt))
     }
 
     fn rotr(self, cnt: usize) -> Self {
-        Self(self.mask().0 >> cnt | self.0 << (100 - cnt))
+        Self(self.mask().0 >> cnt | self.0 << (N - cnt))
+    }
+
+    fn rotl_assign(&mut self) {
+        self.0 = self.0 << 1 | self.0 >> (N - 1)
     }
 
     fn rotr_assign(&mut self) {
-        self.0 = self.mask().0 >> 1 | self.0 << 99;
+        self.0 = self.mask().0 >> 1 | self.0 << (N - 1);
     }
 }
 
-struct Board {
-    rows: Vec<Row100>,
+struct Board<const C: usize> {
+    rows: Vec<Row<C>>,
 }
 
-impl Board {
+impl<const R: usize> Board<R> {
     fn propagate(&mut self) {
         let mut new_rows = self.rows.clone();
         for row in &mut new_rows {
@@ -99,7 +99,7 @@ impl Board {
     }
 }
 
-impl BitAndAssign<&Board> for Board {
+impl<const C: usize> BitAndAssign<&Board<C>> for Board<C> {
     fn bitand_assign(&mut self, rhs: &Self) {
         for (self_row, rhs_row) in self.rows.iter_mut().zip(rhs.rows.iter()) {
             *self_row &= *rhs_row;
@@ -107,15 +107,15 @@ impl BitAndAssign<&Board> for Board {
     }
 }
 
-struct State {
-    positions: Board,
-    blizzard_u: Board,
-    blizzard_d: Board,
-    blizzard_l: Board,
-    blizzard_r: Board,
+struct State<const C: usize> {
+    positions: Board<C>,
+    blizzard_u: Board<C>,
+    blizzard_d: Board<C>,
+    blizzard_l: Board<C>,
+    blizzard_r: Board<C>,
 }
 
-impl State {
+impl<const C: usize> State<C> {
     fn parse(input: &str) -> Self {
         let mut positions = Board { rows: Vec::new() };
         let mut blizzard_u = Board { rows: Vec::new() };
@@ -123,6 +123,7 @@ impl State {
         let mut blizzard_l = Board { rows: Vec::new() };
         let mut blizzard_r = Board { rows: Vec::new() };
         for line in input.lines() {
+            assert!(line.as_bytes().len() == C + 2 || line.is_empty());
             if line.starts_with("##") || line.starts_with("#.#") {
                 continue;
             }
@@ -147,11 +148,11 @@ impl State {
                     _ => panic!(),
                 }
             }
-            positions.rows.push(Row100(0));
-            blizzard_u.rows.push(Row100(!u));
-            blizzard_d.rows.push(Row100(!d));
-            blizzard_l.rows.push(Row100(!l));
-            blizzard_r.rows.push(Row100(!r));
+            positions.rows.push(Row::<C>(0));
+            blizzard_u.rows.push(Row::<C>(!u));
+            blizzard_d.rows.push(Row::<C>(!d));
+            blizzard_l.rows.push(Row::<C>(!l));
+            blizzard_r.rows.push(Row::<C>(!r));
         }
         Self {
             positions,
@@ -167,7 +168,7 @@ impl State {
         self.positions.propagate();
         // Add entry move as well.
         // Corresponds to the upper left corner.
-        self.positions.rows.first_mut().unwrap().0 |= 0x8_0000_0000_0000_0000_0000_0000;
+        self.positions.rows.first_mut().unwrap().0 |= 1 << (C - 1);
         // Move blizzards.
         self.blizzard_u.rotu();
         self.blizzard_d.rotd();
@@ -183,9 +184,9 @@ impl State {
     }
 }
 
-impl std::fmt::Display for State {
+impl<const C: usize> std::fmt::Display for State<C> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{:█<102}\n", ""))?;
+        f.write_fmt(format_args!(" {:▁<1$}\n", "", C))?;
         for (row_p, row_u, row_d, row_l, row_r) in izip!(
             &self.positions.rows,
             &self.blizzard_u.rows,
@@ -198,9 +199,9 @@ impl std::fmt::Display for State {
             let mut d = row_d.0;
             let mut l = row_l.0;
             let mut r = row_r.0;
-            let m = 1u128 << 99;
-            f.write_char('█')?;
-            for _ in 0..100 {
+            let m = 1u128 << (C - 1);
+            f.write_char('▕')?;
+            for _ in 0..C {
                 let mut c = ' ';
                 if (p & m) != 0 {
                     c = 'O';
@@ -220,24 +221,28 @@ impl std::fmt::Display for State {
                 l <<= 1;
                 r <<= 1;
             }
-            f.write_str("█\n")?;
+            f.write_str("▏\n")?;
         }
-        f.write_fmt(format_args!("{:█<102}", ""))?;
+        f.write_fmt(format_args!(" {:▔<1$}", "", C))?;
         Ok(())
     }
 }
 
 pub fn run(input: &str) -> (usize, usize) {
+    run_helper::<100>(input)
+}
+
+pub fn run_helper<const C: usize>(input: &str) -> (usize, usize) {
     // 1. Generate bit arrays from the grid.
-    let mut state: State = State::parse(input);
-    //println!("{state}");
+    let mut state: State<C> = State::parse(input);
+    println!("{state}");
     // 2. Generate an empty playing field.
     let mut minutes = 1;
     while !state.step() {
         minutes += 1;
-        //let mut s = String::new();
-        //drop(std::io::stdin().read_line(&mut s));
-        //println!("{state}");
+        let mut s = String::new();
+        drop(std::io::stdin().read_line(&mut s));
+        println!("{state}");
     }
     (minutes, 0)
 }
@@ -249,14 +254,13 @@ mod test {
     #[test]
     fn no_blizzards() {
         let input = "\
-######################################################################################################
-#....................................................................................................#
-#....................................................................................................#
-#....................................................................................................#
-#....................................................................................................#
-######################################################################################################\
-";
-        assert_eq!(run(input).0, 103);
+#.#######
+#.......#
+#.......#
+#.......#
+#.......#
+#######.#";
+        assert_eq!(run_helper::<7>(input).0, 103);
     }
 
     #[test]
@@ -300,4 +304,16 @@ mod test {
         assert_eq!(run(input).0, 103);
     }
 
+    #[test]
+    fn example() {
+        let input = "\
+#.######
+#>>.<^<#
+#.<..<<#
+#>v.><>#
+#<^v^^>#
+######.#\
+";
+        assert_eq!(run_helper::<6>(input), (18, 54));
+    }
 }

@@ -159,6 +159,12 @@ impl<const C: usize> State<C> {
         }
     }
 
+    fn clear_positions(&mut self) {
+        for row in &mut self.positions.rows {
+            row.0 = 0;
+        }
+    }
+
     fn step(&mut self) -> bool {
         // Propagate movement options.
         self.positions.propagate();
@@ -177,6 +183,26 @@ impl<const C: usize> State<C> {
         self.positions &= &self.blizzard_r;
         // Indicate whether the target cell has been reached.
         self.positions.rows.last().unwrap().0.trailing_zeros() == 0
+    }
+
+    fn step_back(&mut self) -> bool {
+        // Propagate movement options.
+        self.positions.propagate();
+        // Add entry move as well.
+        // Corresponds to the upper left corner.
+        self.positions.rows.last_mut().unwrap().0 |= 1;
+        // Move blizzards.
+        self.blizzard_u.rotu();
+        self.blizzard_d.rotd();
+        self.blizzard_l.rotl();
+        self.blizzard_r.rotr();
+        // Remove possibilities from board.
+        self.positions &= &self.blizzard_u;
+        self.positions &= &self.blizzard_d;
+        self.positions &= &self.blizzard_l;
+        self.positions &= &self.blizzard_r;
+        // Indicate whether the target cell has been reached.
+        self.positions.rows.first().unwrap().0.leading_zeros() == 128 - C as u32
     }
 }
 
@@ -229,15 +255,34 @@ pub fn run(input: &str) -> (usize, usize) {
 }
 
 pub fn run_helper<const C: usize>(input: &str) -> (usize, usize) {
-    // 1. Generate bit arrays from the grid.
     let mut state: State<C> = State::parse(input);
-    // 2. Generate an empty playing field.
-    let mut minutes = 1;
+    let mut minutes = 0;
+
+    // Part 1
     while !state.step() {
         minutes += 1;
     }
-    minutes += 1;
-    (minutes, 0)
+    state.step(); // extra step into the goal
+    minutes += 2; // one minute not counted, one extra
+    let res1 = minutes;
+
+    // Part 2
+    // Going back
+    state.clear_positions();
+    while !state.step_back() {
+        minutes += 1;
+    }
+    state.step_back(); // extra step into the start
+    minutes += 2;
+
+    // Going forward again
+    state.clear_positions();
+    while !state.step() {
+        minutes += 1;
+    }
+    minutes += 2;
+
+    (res1, minutes)
 }
 
 #[cfg(test)]

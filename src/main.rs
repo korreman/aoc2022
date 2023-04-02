@@ -45,6 +45,7 @@ fn main() {
     state.run_day(11, &optimized::day11::run, "input/day11.txt");
     state.run_day(14, &optimized::day14::run, "input/day14.txt");
     state.run_day(15, &optimized::day15::run, "input/day15.txt");
+    state.run_day(24, &optimized::day24::run, "input/day24.txt");
     state.print();
 }
 

@@ -5,7 +5,7 @@ use std::{
 
 use itertools::izip;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct Row<const N: usize>(u128);
 
 impl<const N: usize> BitAndAssign for Row<N> {
@@ -24,7 +24,7 @@ impl<const N: usize> Shl<usize> for Row<N> {
     type Output = Row<N>;
 
     fn shl(self, rhs: usize) -> Self::Output {
-        Self(self.0 << rhs)
+        Self((self.0 << rhs) & ((1 << N) - 1))
     }
 }
 
@@ -32,29 +32,25 @@ impl<const N: usize> Shr<usize> for Row<N> {
     type Output = Row<N>;
 
     fn shr(self, rhs: usize) -> Self::Output {
-        Self(self.mask().0 >> rhs)
+        Self(self.0 >> rhs)
     }
 }
 
 impl<const N: usize> Row<N> {
     fn mask(self) -> Self {
-        Self(self.0 & ((1 << N) - 1))
-    }
-
-    fn rotl(self, cnt: usize) -> Self {
-        Self(self.0 << cnt | self.0 >> (N - cnt))
-    }
-
-    fn rotr(self, cnt: usize) -> Self {
-        Self(self.mask().0 >> cnt | self.0 << (N - cnt))
+        Self(self.0 | !((1 << N) - 1))
     }
 
     fn rotl_assign(&mut self) {
-        self.0 = self.0 << 1 | self.0 >> (N - 1)
+        self.0 = !self.0;
+        self.0 = (self.0 << 1) | (self.0 >> (N - 1));
+        *self = Self(!self.0).mask();
     }
 
     fn rotr_assign(&mut self) {
-        self.0 = self.mask().0 >> 1 | self.0 << (N - 1);
+        self.0 = !self.0;
+        self.0 = (self.0 >> 1) | (self.0 << (N - 1));
+        self.0 = !self.0;
     }
 }
 
@@ -199,7 +195,7 @@ impl<const C: usize> std::fmt::Display for State<C> {
             let mut d = row_d.0;
             let mut l = row_l.0;
             let mut r = row_r.0;
-            let m = 1u128 << (C - 1);
+            let m = 1 << (C - 1);
             f.write_char('▕')?;
             for _ in 0..C {
                 let mut c = ' ';
@@ -235,15 +231,12 @@ pub fn run(input: &str) -> (usize, usize) {
 pub fn run_helper<const C: usize>(input: &str) -> (usize, usize) {
     // 1. Generate bit arrays from the grid.
     let mut state: State<C> = State::parse(input);
-    println!("{state}");
     // 2. Generate an empty playing field.
     let mut minutes = 1;
     while !state.step() {
         minutes += 1;
-        let mut s = String::new();
-        drop(std::io::stdin().read_line(&mut s));
-        println!("{state}");
     }
+    minutes += 1;
     (minutes, 0)
 }
 
@@ -293,17 +286,19 @@ mod test {
     #[test]
     fn wraparound() {
         let input = "\
-#.####################################################################################################
-#.........................................................v..........................................#
-#.<.<<.<<<..<<<<..........................................v..........................................#
-#.........................................................v...........................>>>>..>>>.>>.>.#
-#.........................................................v..........................................#
-#.........................................................v..........................................#
-####################################################################################################.#\
+#.###################################################################
+#...................................................................#
+#<<<<<<<<<<<<<<<<<<<<<<<<<..........................................#
+#....................................................>>>>..>>>.>>.>.#
+#...................................................................#
+#...................................................................#
+###################################################################.#\
 ";
-        assert_eq!(run(input).0, 103);
+        assert_eq!(run_helper::<67>(input).0, 103);
     }
 
+    // TODO: Which end of the bitstring are the relevant bits actually located in?
+    // Make sure all functions agree on this.
     #[test]
     fn example() {
         let input = "\
@@ -315,5 +310,29 @@ mod test {
 ######.#\
 ";
         assert_eq!(run_helper::<6>(input), (18, 54));
+    }
+
+    // TODO: Which end of the bitstring are the relevant bits actually located in?
+    // Make sure all functions agree on this.
+    #[test]
+    fn wall() {
+        let input = "\
+#.######
+#<.....#
+#<.....#
+#<.....#
+#<.....#
+######.#\
+";
+        assert_eq!(run_helper::<6>(input), (18, 54));
+    }
+
+    #[test]
+    fn row() {
+        assert_eq!(Row::<4>(0b11011100).mask(), Row::<4>(0b00001100));
+        assert_eq!(Row::<5>(0b11011100).mask(), Row::<5>(0b00011100));
+        let mut x = Row::<8>(0b11011100);
+        x.rotl_assign();
+        assert_eq!(x.mask(), Row::<8>(0b10111001));
     }
 }

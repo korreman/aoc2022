@@ -154,7 +154,7 @@ impl Blueprint {
             .map(|t| t.cost)
             .reduce(Currency::max_merge)
             .unwrap();
-        for minute in 1..=minutes {
+        for _ in 1..=minutes {
             for state in &states {
                 if state.inventory.ge(&self.geode) {
                     off_states.insert(State {

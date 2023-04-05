@@ -35,6 +35,28 @@ impl Pos {
             })
         }
     }
+
+    pub fn step(self, dir: Dir4) -> Self {
+        match dir {
+            Dir4::N => pos(self.x, self.y - 1),
+            Dir4::E => pos(self.x + 1, self.y),
+            Dir4::S => pos(self.x, self.y + 1),
+            Dir4::W => pos(self.x - 1, self.y),
+        }
+    }
+
+    pub fn step_dir8(self, dir: Dir8) -> Self {
+        match dir {
+            Dir8::NO => pos(self.x, self.y - 1),
+            Dir8::NE => pos(self.x + 1, self.y - 1),
+            Dir8::EA => pos(self.x + 1, self.y),
+            Dir8::SE => pos(self.x + 1, self.y + 1),
+            Dir8::SO => pos(self.x, self.y + 1),
+            Dir8::SW => pos(self.x - 1, self.y + 1),
+            Dir8::WE => pos(self.x - 1, self.y),
+            Dir8::NW => pos(self.x - 1, self.y - 1),
+        }
+    }
 }
 
 impl AddAssign for Pos {
@@ -51,6 +73,161 @@ impl Add<Pos> for Pos {
         Pos {
             x: self.x + rhs.x,
             y: self.y + rhs.y,
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Rot {
+    L,
+    R,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Dir4 {
+    N,
+    E,
+    S,
+    W,
+}
+
+impl Dir4 {
+    pub fn rotate(self, r: Rot) -> Self {
+        match r {
+            Rot::L => match self {
+                Dir4::E => Dir4::N,
+                Dir4::S => Dir4::E,
+                Dir4::W => Dir4::S,
+                Dir4::N => Dir4::W,
+            },
+            Rot::R => match self {
+                Dir4::E => Dir4::S,
+                Dir4::S => Dir4::W,
+                Dir4::W => Dir4::N,
+                Dir4::N => Dir4::E,
+            },
+        }
+    }
+
+    pub fn flip(self) -> Self {
+        match self {
+            Dir4::N => Dir4::S,
+            Dir4::E => Dir4::W,
+            Dir4::S => Dir4::N,
+            Dir4::W => Dir4::E,
+        }
+    }
+
+    /// Establish an index standard for lookup tables
+    pub fn to_idx(self) -> usize {
+        match self {
+            Dir4::N => 0,
+            Dir4::E => 1,
+            Dir4::S => 2,
+            Dir4::W => 3,
+        }
+    }
+}
+
+impl std::fmt::Display for Dir4 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_char(match self {
+            Dir4::N => '↑',
+            Dir4::E => '→',
+            Dir4::S => '↓',
+            Dir4::W => '←',
+        })
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Dir8 {
+    NO,
+    NE,
+    EA,
+    SE,
+    SO,
+    SW,
+    WE,
+    NW,
+}
+
+impl Dir8 {
+    pub fn rotate(self, r: Rot) -> Self {
+        match r {
+            Rot::L => match self {
+                Dir8::NO => Dir8::NW,
+                Dir8::NE => Dir8::NO,
+                Dir8::EA => Dir8::NE,
+                Dir8::SE => Dir8::EA,
+                Dir8::SO => Dir8::SE,
+                Dir8::SW => Dir8::SO,
+                Dir8::WE => Dir8::SW,
+                Dir8::NW => Dir8::WE,
+            },
+            Rot::R => match self {
+                Dir8::NO => Dir8::NE,
+                Dir8::NE => Dir8::EA,
+                Dir8::EA => Dir8::SE,
+                Dir8::SE => Dir8::SO,
+                Dir8::SO => Dir8::SW,
+                Dir8::SW => Dir8::WE,
+                Dir8::WE => Dir8::NW,
+                Dir8::NW => Dir8::NO,
+            },
+        }
+    }
+
+    pub fn flip(self) -> Self {
+        match self {
+            Dir8::NO => Dir8::SO,
+            Dir8::NE => Dir8::SW,
+            Dir8::EA => Dir8::WE,
+            Dir8::SE => Dir8::NW,
+            Dir8::SO => Dir8::NO,
+            Dir8::SW => Dir8::NE,
+            Dir8::WE => Dir8::EA,
+            Dir8::NW => Dir8::SE,
+        }
+    }
+
+    /// Establish an index standard for lookup tables
+    pub fn to_idx(self) -> usize {
+        match self {
+            Dir8::NO => 0,
+            Dir8::EA => 1,
+            Dir8::SO => 2,
+            Dir8::WE => 3,
+            Dir8::NE => 4,
+            Dir8::SE => 5,
+            Dir8::SW => 6,
+            Dir8::NW => 7,
+        }
+    }
+}
+
+impl std::fmt::Display for Dir8 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_char(match self {
+            Dir8::NO => '↑',
+            Dir8::NE => '↗',
+            Dir8::EA => '→',
+            Dir8::SE => '↘',
+            Dir8::SO => '↓',
+            Dir8::SW => '↙',
+            Dir8::WE => '←',
+            Dir8::NW => '↖',
+        })
+    }
+}
+
+impl From<Dir4> for Dir8 {
+    fn from(val: Dir4) -> Self {
+        match val {
+            Dir4::N => Dir8::NO,
+            Dir4::E => Dir8::EA,
+            Dir4::S => Dir8::SO,
+            Dir4::W => Dir8::WE,
         }
     }
 }

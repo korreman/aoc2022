@@ -1,55 +1,59 @@
-use std::fmt::{Display, Write};
+use std::ops::Index;
 
-use crate::util::{
-    graph::GraphImpl,
-    grid::{pos, Grid, Pos},
-};
+use crate::util::grid::{pos, Dir4, Grid, Pos, Rot};
 
-#[derive(Clone, Copy)]
-enum Dir {
-    E,
-    S,
-    W,
-    N,
+pub fn run(input: &str) -> (usize, usize) {
+    let (map, insts) = input.trim_end().split_once("\n\n").unwrap();
+    let flat_map = FlatMap::new(map);
+    let res1 = task(insts, flat_map);
+    (res1, 0)
 }
 
-impl Dir {
-    fn to_char(self) -> char {
-        match self {
-            Dir::E => '>',
-            Dir::S => 'v',
-            Dir::W => '<',
-            Dir::N => '^',
+fn task<M: MapRep>(mut insts: &str, map: M) -> usize {
+    let mut p = map.start();
+    while !insts.is_empty() {
+        match insts.as_bytes()[0] {
+            b'L' => {
+                insts = &insts[1..];
+                p = p.rotate(Rot::L)
+            }
+            b'R' => {
+                insts = &insts[1..];
+                p = p.rotate(Rot::R)
+            }
+            _ => {
+                let (num, tail) = match insts.find(['L', 'R']) {
+                    Some(i) => insts.split_at(i),
+                    None => (insts, ""),
+                };
+                insts = tail;
+                let num = num.parse::<u32>().unwrap();
+                for _ in 0..num {
+                    let new_p = map.step_fwd(p);
+                    if map[new_p] {
+                        p = new_p;
+                    } else {
+                        break;
+                    }
+                }
+            }
         }
     }
-    fn turn_left(self) -> Self {
-        match self {
-            Dir::E => Dir::N,
-            Dir::S => Dir::E,
-            Dir::W => Dir::S,
-            Dir::N => Dir::W,
+    let (p, dir) = map.result(p);
+    (p.y + 1) * 1000
+        + (p.x + 1) * 4
+        + match dir {
+            Dir4::E => 0,
+            Dir4::S => 1,
+            Dir4::W => 2,
+            Dir4::N => 3,
         }
-    }
-    fn turn_right(self) -> Self {
-        match self {
-            Dir::E => Dir::S,
-            Dir::S => Dir::W,
-            Dir::W => Dir::N,
-            Dir::N => Dir::E,
-        }
-    }
 }
 
-impl Display for Dir {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let c = match self {
-            Dir::E => '>',
-            Dir::S => 'v',
-            Dir::W => '<',
-            Dir::N => '^',
-        };
-        f.write_char(c)
-    }
+// ----- Part 1 types -----
+struct FlatMap {
+    grid: Grid<Cell>,
+    wrap_bounds: WrapBounds,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -59,14 +63,86 @@ enum Cell {
     Nothing,
 }
 
-impl Display for Cell {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let c = match self {
-            Cell::Wall => '#',
-            Cell::Air => '.',
-            Cell::Nothing => ' ',
-        };
-        f.write_char(c)
+#[derive(Clone, Copy)]
+struct FlatPos {
+    pos: Pos,
+    dir: Dir4,
+}
+
+impl WalkPos for FlatPos {
+    fn rotate(mut self, rot: Rot) -> Self {
+        self.dir = self.dir.rotate(rot);
+        self
+    }
+}
+
+impl Index<FlatPos> for FlatMap {
+    type Output = bool;
+
+    fn index(&self, index: FlatPos) -> &Self::Output {
+        match self.grid[index.pos] {
+            Cell::Wall => &false,
+            Cell::Air => &true,
+            Cell::Nothing => panic!(),
+        }
+    }
+}
+
+impl MapRep for FlatMap {
+    type Pos = FlatPos;
+
+    fn new(map: &str) -> Self {
+        let grid = Grid::parse_default(map, Cell::Nothing, |_, c| match c {
+            '#' => Cell::Wall,
+            '.' => Cell::Air,
+            ' ' => Cell::Nothing,
+            _ => panic!("unrecognized cell character"),
+        });
+        let wrap_bounds: WrapBounds = grid.clone().into();
+        Self { grid, wrap_bounds }
+    }
+
+    fn start(&self) -> Self::Pos {
+        let pos = pos(self.wrap_bounds.x_bounds[0].0, 0);
+        FlatPos { pos, dir: Dir4::E }
+    }
+
+    fn step_fwd(&self, mut p: Self::Pos) -> Self::Pos {
+        match p.dir {
+            Dir4::N => {
+                if p.pos.y == self.wrap_bounds.y_bounds[p.pos.x].0 {
+                    p.pos.y = self.wrap_bounds.y_bounds[p.pos.x].1;
+                } else {
+                    p.pos.y -= 1;
+                }
+            }
+            Dir4::S => {
+                if p.pos.y == self.wrap_bounds.y_bounds[p.pos.x].1 {
+                    p.pos.y = self.wrap_bounds.y_bounds[p.pos.x].0;
+                } else {
+                    p.pos.y += 1;
+                }
+            }
+            Dir4::E => {
+                if p.pos.x == self.wrap_bounds.x_bounds[p.pos.y].1 {
+                    p.pos.x = self.wrap_bounds.x_bounds[p.pos.y].0;
+                } else {
+                    p.pos.x += 1;
+                }
+            }
+            Dir4::W => {
+                if p.pos.x == self.wrap_bounds.x_bounds[p.pos.y].0 {
+                    p.pos.x = self.wrap_bounds.x_bounds[p.pos.y].1;
+                } else {
+                    p.pos.x -= 1;
+                }
+            }
+        }
+        p
+    }
+
+    fn result(&self, p: Self::Pos) -> (Pos, Dir4) {
+        (p.pos, p.dir)
     }
 }
 
@@ -74,42 +150,6 @@ impl Display for Cell {
 struct WrapBounds {
     x_bounds: Vec<(usize, usize)>,
     y_bounds: Vec<(usize, usize)>,
-}
-
-impl WrapBounds {
-    fn walk_wrapped(&self, mut p: Pos, dir: Dir) -> Pos {
-        match dir {
-            Dir::N => {
-                if p.y == self.y_bounds[p.x].0 {
-                    p.y = self.y_bounds[p.x].1;
-                } else {
-                    p.y -= 1;
-                }
-            }
-            Dir::S => {
-                if p.y == self.y_bounds[p.x].1 {
-                    p.y = self.y_bounds[p.x].0;
-                } else {
-                    p.y += 1;
-                }
-            }
-            Dir::E => {
-                if p.x == self.x_bounds[p.y].1 {
-                    p.x = self.x_bounds[p.y].0;
-                } else {
-                    p.x += 1;
-                }
-            }
-            Dir::W => {
-                if p.x == self.x_bounds[p.y].0 {
-                    p.x = self.x_bounds[p.y].1;
-                } else {
-                    p.x -= 1;
-                }
-            }
-        }
-        p
-    }
 }
 
 impl From<Grid<Cell>> for WrapBounds {
@@ -144,63 +184,93 @@ impl From<Grid<Cell>> for WrapBounds {
     }
 }
 
-pub fn run(input: &str) -> (usize, usize) {
-    let (a, mut b) = input.trim_end().split_once("\n\n").unwrap();
-    let grid = Grid::parse_default(a, Cell::Nothing, |_, c| match c {
-        '#' => Cell::Wall,
-        '.' => Cell::Air,
-        ' ' => Cell::Nothing,
-        _ => panic!("unrecognized cell character"),
-    });
-    let mut drawn_path = grid.map(|cell| match cell {
-        Cell::Wall => '#',
-        Cell::Air => '.',
-        Cell::Nothing => ' ',
-    });
-    let bounds: WrapBounds = grid.clone().into();
-    let mut p = pos(bounds.x_bounds[0].0, 0);
-    let mut dir = Dir::E;
-    while !b.is_empty() {
-        match b.as_bytes()[0] {
-            b'L' => {
-                b = &b[1..];
-                dir = dir.turn_left()
-            }
-            b'R' => {
-                b = &b[1..];
-                dir = dir.turn_right()
-            }
-            _ => {
-                let (num, tail) = match b.find(['L', 'R']) {
-                    Some(i) => b.split_at(i),
-                    None => (b, ""),
-                };
-                b = tail;
-                let num = num.parse::<u32>().unwrap();
-                for _ in 0..num {
-                    let new_p = bounds.walk_wrapped(p, dir);
-                    if grid[new_p] != Cell::Wall {
-                        drawn_path[p] = dir.to_char();
-                        p = new_p;
-                    } else {
-                        break;
-                    }
+// ----- Part 2 types -----
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+struct CubePos {
+    face: usize,
+    pos: Pos,
+    dir: Dir4,
+}
+
+impl WalkPos for CubePos {
+    fn rotate(mut self, rot: Rot) -> Self {
+        self.dir = self.dir.rotate(rot);
+        self
+    }
+}
+
+struct Face {
+    surface: Grid<bool>,
+    sides: [(usize, Rot); 4],
+}
+
+struct Cube {
+    width: usize,
+    faces: [Face; 6],
+}
+
+impl Index<CubePos> for Cube {
+    type Output = bool;
+
+    fn index(&self, index: CubePos) -> &Self::Output {
+        &self.faces[index.face].surface[index.pos]
+    }
+}
+
+impl MapRep for Cube {
+    type Pos = CubePos;
+
+    fn new(map: &str) -> Self {
+        todo!()
+    }
+
+    fn start(&self) -> Self::Pos {
+        todo!()
+    }
+
+    fn step_fwd(&self, mut p: CubePos) -> CubePos {
+        p.pos += pos(self.width, self.width);
+        p.pos = p.pos.step(p.dir);
+        p.pos.x %= self.width;
+        p.pos.y %= self.width;
+        if p.pos.x == self.width || p.pos.x == 0 || p.pos.y == self.width || p.pos.y == 0 {
+            // retrieve new face and coordinate
+            let (new_face, rotation) = self.faces[p.face].sides[p.dir.flip().to_idx()];
+            // switch to new face
+            p.face = new_face;
+            // rotate to enter new face correctly
+            p.dir = p.dir.rotate(rotation);
+            match rotation {
+                Rot::L => {
+                    let temp = p.pos.x;
+                    p.pos.x = self.width - p.pos.y;
+                    p.pos.y = temp;
+                }
+                Rot::R => {
+                    let temp = p.pos.x;
+                    p.pos.x = p.pos.y;
+                    p.pos.y = self.width - temp;
                 }
             }
         }
+        p
     }
-    drawn_path[p] = 'x';
-    //println!("{grid}");
-    //println!("{drawn_path}");
-    let res1 = (p.y + 1) * 1000
-        + (p.x + 1) * 4
-        + match dir {
-            Dir::E => 0,
-            Dir::S => 1,
-            Dir::W => 2,
-            Dir::N => 3,
-        };
-    (res1, 0)
+
+    fn result(&self, p: Self::Pos) -> (Pos, Dir4) {
+        todo!()
+    }
+}
+
+trait MapRep: Index<Self::Pos, Output = bool> {
+    type Pos: WalkPos;
+    fn new(map: &str) -> Self;
+    fn start(&self) -> Self::Pos;
+    fn step_fwd(&self, p: Self::Pos) -> Self::Pos;
+    fn result(&self, p: Self::Pos) -> (Pos, Dir4);
+}
+
+trait WalkPos: Clone + Copy {
+    fn rotate(self, rot: Rot) -> Self;
 }
 
 #[cfg(test)]

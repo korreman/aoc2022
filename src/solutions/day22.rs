@@ -6,7 +6,21 @@ pub fn run(input: &str) -> (usize, usize) {
     let (map, insts) = input.trim_end().split_once("\n\n").unwrap();
     let flat_map = FlatMap::new(map);
     let res1 = task(insts, flat_map);
-    (res1, 0)
+    let cube_map = CubeMap::new(map);
+    let res2 = task(insts, cube_map);
+    (res1, res2)
+}
+
+trait MapRep: Index<Self::Pos, Output = bool> {
+    type Pos: WalkPos;
+    fn new(map: &str) -> Self;
+    fn start(&self) -> Self::Pos;
+    fn step_fwd(&self, p: Self::Pos) -> Self::Pos;
+    fn result(&self, p: Self::Pos) -> (Pos, Dir4);
+}
+
+trait WalkPos: Clone + Copy {
+    fn rotate(self, rot: Rot) -> Self;
 }
 
 fn task<M: MapRep>(mut insts: &str, map: M) -> usize {
@@ -204,12 +218,12 @@ struct Face {
     sides: [(usize, Rot); 4],
 }
 
-struct Cube {
+struct CubeMap {
     width: usize,
     faces: [Face; 6],
 }
 
-impl Index<CubePos> for Cube {
+impl Index<CubePos> for CubeMap {
     type Output = bool;
 
     fn index(&self, index: CubePos) -> &Self::Output {
@@ -217,7 +231,7 @@ impl Index<CubePos> for Cube {
     }
 }
 
-impl MapRep for Cube {
+impl MapRep for CubeMap {
     type Pos = CubePos;
 
     fn new(map: &str) -> Self {
@@ -259,18 +273,6 @@ impl MapRep for Cube {
     fn result(&self, p: Self::Pos) -> (Pos, Dir4) {
         todo!()
     }
-}
-
-trait MapRep: Index<Self::Pos, Output = bool> {
-    type Pos: WalkPos;
-    fn new(map: &str) -> Self;
-    fn start(&self) -> Self::Pos;
-    fn step_fwd(&self, p: Self::Pos) -> Self::Pos;
-    fn result(&self, p: Self::Pos) -> (Pos, Dir4);
-}
-
-trait WalkPos: Clone + Copy {
-    fn rotate(self, rot: Rot) -> Self;
 }
 
 #[cfg(test)]

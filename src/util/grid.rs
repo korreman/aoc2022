@@ -318,6 +318,20 @@ impl<T: Clone> Grid<T> {
     }
 }
 
+impl<T: Default + Clone> Grid<T> {
+    pub fn crop_area(&self, start: Pos, end: Pos) -> Self {
+        let width = end.x - start.x;
+        let height = end.y - start.y;
+        let mut result = Self::new_filled(width, height, T::default());
+        for x in 0..width {
+            for y in 0..height {
+                result[pos(x, y)] = self[pos(x + start.x, y + start.y)].clone();
+            }
+        }
+        result
+    }
+}
+
 impl<T> Grid<T> {
     pub fn parse<P>(input: &str, mut p: P) -> Self
     where

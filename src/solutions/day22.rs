@@ -1,19 +1,26 @@
-use std::ops::Index;
+use std::{ops::Index, collections::HashMap};
 
 use crate::util::grid::{pos, Dir4, Grid, Pos, Rot};
 
 pub fn run(input: &str) -> (usize, usize) {
     let (map, insts) = input.trim_end().split_once("\n\n").unwrap();
-    let flat_map = FlatMap::new(map);
+    let grid = Grid::parse_default(map, Cell::Nothing, |_, c| match c {
+        '#' => Cell::Wall,
+        '.' => Cell::Air,
+        ' ' => Cell::Nothing,
+        _ => panic!("unrecognized cell character"),
+    });
+    let flat_map = FlatMap::new(&grid);
     let res1 = task(insts, flat_map);
-    let cube_map = CubeMap::new(map);
-    let res2 = task(insts, cube_map);
-    (res1, res2)
+    (res1, 0)
+    //let cube_map = CubeMap::new(map);
+    //let res2 = task(insts, cube_map);
+    //(res1, res2)
 }
 
 trait MapRep: Index<Self::Pos, Output = bool> {
     type Pos: WalkPos;
-    fn new(map: &str) -> Self;
+    fn new(map: &Grid<Cell>) -> Self;
     fn start(&self) -> Self::Pos;
     fn step_fwd(&self, p: Self::Pos) -> Self::Pos;
     fn result(&self, p: Self::Pos) -> (Pos, Dir4);
@@ -66,14 +73,14 @@ fn task<M: MapRep>(mut insts: &str, map: M) -> usize {
 
 // ----- Part 1 types -----
 struct FlatMap {
-    grid: Grid<Cell>,
+    map: Grid<Cell>,
     wrap_bounds: WrapBounds,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Default)]
 enum Cell {
     Wall,
-    Air,
+    #[default] Air,
     Nothing,
 }
 
@@ -94,7 +101,7 @@ impl Index<FlatPos> for FlatMap {
     type Output = bool;
 
     fn index(&self, index: FlatPos) -> &Self::Output {
-        match self.grid[index.pos] {
+        match self.map[index.pos] {
             Cell::Wall => &false,
             Cell::Air => &true,
             Cell::Nothing => panic!(),
@@ -105,15 +112,12 @@ impl Index<FlatPos> for FlatMap {
 impl MapRep for FlatMap {
     type Pos = FlatPos;
 
-    fn new(map: &str) -> Self {
-        let grid = Grid::parse_default(map, Cell::Nothing, |_, c| match c {
-            '#' => Cell::Wall,
-            '.' => Cell::Air,
-            ' ' => Cell::Nothing,
-            _ => panic!("unrecognized cell character"),
-        });
-        let wrap_bounds: WrapBounds = grid.clone().into();
-        Self { grid, wrap_bounds }
+    fn new(map: &Grid<Cell>) -> Self {
+        let wrap_bounds: WrapBounds = map.clone().into();
+        Self {
+            map: map.clone(),
+            wrap_bounds,
+        }
     }
 
     fn start(&self) -> Self::Pos {
@@ -216,14 +220,14 @@ impl WalkPos for CubePos {
 struct Face {
     surface: Grid<bool>,
     sides: [(usize, Rot); 4],
+    grid_pos: Pos,
 }
 
-struct CubeMap {
-    width: usize,
+struct CubeMap<const N: usize> {
     faces: [Face; 6],
 }
 
-impl Index<CubePos> for CubeMap {
+impl<const N: usize> Index<CubePos> for CubeMap<N> {
     type Output = bool;
 
     fn index(&self, index: CubePos) -> &Self::Output {
@@ -231,23 +235,41 @@ impl Index<CubePos> for CubeMap {
     }
 }
 
-impl MapRep for CubeMap {
+impl<const N: usize> MapRep for CubeMap<N> {
     type Pos = CubePos;
 
-    fn new(map: &str) -> Self {
-        todo!()
+    fn new(map: &Grid<Cell>) -> Self {
+        // Collect faces
+        let mut faces = HashMap::new();
+        for x in 0..(map.width() / N) {
+            for y in 0..(map.height() / N) {
+                let corner = pos(x * N, y * N);
+                if map[corner] != Cell::Nothing {
+                    faces.insert(corner, map.crop_area(corner, corner + pos(N, N)));
+                }
+            }
+        }
+        // Get immediate neighbors
+        // Repeatedly get indirect neighbors
+        // Package for output
+        let faces = todo!();
+        Self { faces }
     }
 
-    fn start(&self) -> Self::Pos {
-        todo!()
+    fn start(&self) -> CubePos {
+        CubePos {
+            face: 0,
+            pos: pos(0, N),
+            dir: Dir4::E,
+        }
     }
 
     fn step_fwd(&self, mut p: CubePos) -> CubePos {
-        p.pos += pos(self.width, self.width);
+        p.pos += pos(N, N);
         p.pos = p.pos.step(p.dir);
-        p.pos.x %= self.width;
-        p.pos.y %= self.width;
-        if p.pos.x == self.width || p.pos.x == 0 || p.pos.y == self.width || p.pos.y == 0 {
+        p.pos.x %= N;
+        p.pos.y %= N;
+        if p.pos.x == N || p.pos.x == 0 || p.pos.y == N || p.pos.y == 0 {
             // retrieve new face and coordinate
             let (new_face, rotation) = self.faces[p.face].sides[p.dir.flip().to_idx()];
             // switch to new face
@@ -257,21 +279,21 @@ impl MapRep for CubeMap {
             match rotation {
                 Rot::L => {
                     let temp = p.pos.x;
-                    p.pos.x = self.width - p.pos.y;
+                    p.pos.x = N - p.pos.y;
                     p.pos.y = temp;
                 }
                 Rot::R => {
                     let temp = p.pos.x;
                     p.pos.x = p.pos.y;
-                    p.pos.y = self.width - temp;
+                    p.pos.y = N - temp;
                 }
             }
         }
         p
     }
 
-    fn result(&self, p: Self::Pos) -> (Pos, Dir4) {
-        todo!()
+    fn result(&self, p: CubePos) -> (Pos, Dir4) {
+        (self.faces[p.face].grid_pos + p.pos, p.dir)
     }
 }
 
@@ -279,20 +301,22 @@ impl MapRep for CubeMap {
 mod tests {
     #[test]
     fn test() {
-        let input = "        ...#
-        .#..
-        #...
-        ....
-...#.......#
-........#...
-..#....#....
-..........#.
-        ...#....
-        .....#..
-        .#......
-        ......#.
-
-10R5L5R10L4R5L5";
+        let input = "\
+                    ...#\n\
+                    .#..\n\
+                    #...\n\
+                    ....\n\
+            ...#.......#\n\
+            ........#...\n\
+            ..#....#....\n\
+            ..........#.\n\
+                    ...#....\n\
+                    .....#..\n\
+                    .#......\n\
+                    ......#.\n\
+            \n\
+            10R5L5R10L4R5L5\n\
+    ";
         assert_eq!(super::run(input), (6032, 5031));
     }
 }

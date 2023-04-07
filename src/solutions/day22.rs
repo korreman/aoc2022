@@ -1,8 +1,21 @@
-use std::{ops::Index, collections::HashMap};
+use std::{
+    collections::HashMap,
+    fmt::{Debug, Write},
+    ops::Index,
+};
 
-use crate::util::grid::{pos, Dir4, Grid, Pos, Rot};
+use itertools::Itertools;
+
+use crate::util::{
+    graph::GraphImpl,
+    grid::{pos, Dir4, Grid, Pos, Rot},
+};
 
 pub fn run(input: &str) -> (usize, usize) {
+    run_size::<50>(input)
+}
+
+pub fn run_size<const N: usize>(input: &str) -> (usize, usize) {
     let (map, insts) = input.trim_end().split_once("\n\n").unwrap();
     let grid = Grid::parse_default(map, Cell::Nothing, |_, c| match c {
         '#' => Cell::Wall,
@@ -12,10 +25,9 @@ pub fn run(input: &str) -> (usize, usize) {
     });
     let flat_map = FlatMap::new(&grid);
     let res1 = task(insts, flat_map);
-    (res1, 0)
-    //let cube_map = CubeMap::new(map);
-    //let res2 = task(insts, cube_map);
-    //(res1, res2)
+    let cube_map = CubeMap::<N>::new(&grid);
+    let res2 = task(insts, cube_map);
+    (res1, res2)
 }
 
 trait MapRep: Index<Self::Pos, Output = bool> {
@@ -26,7 +38,7 @@ trait MapRep: Index<Self::Pos, Output = bool> {
     fn result(&self, p: Self::Pos) -> (Pos, Dir4);
 }
 
-trait WalkPos: Clone + Copy {
+trait WalkPos: Clone + Copy + Debug {
     fn rotate(self, rot: Rot) -> Self;
 }
 
@@ -80,11 +92,22 @@ struct FlatMap {
 #[derive(Clone, PartialEq, Eq, Default)]
 enum Cell {
     Wall,
-    #[default] Air,
+    #[default]
+    Air,
     Nothing,
 }
 
-#[derive(Clone, Copy)]
+impl std::fmt::Display for Cell {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_char(match self {
+            Cell::Wall => '#',
+            Cell::Air => '.',
+            Cell::Nothing => ' ',
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
 struct FlatPos {
     pos: Pos,
     dir: Dir4,
@@ -104,7 +127,7 @@ impl Index<FlatPos> for FlatMap {
         match self.map[index.pos] {
             Cell::Wall => &false,
             Cell::Air => &true,
-            Cell::Nothing => panic!(),
+            Cell::Nothing => panic!("index outside flatmap bounds (a Nothing cell)"),
         }
     }
 }
@@ -219,11 +242,18 @@ impl WalkPos for CubePos {
 
 struct Face {
     surface: Grid<bool>,
-    sides: [(usize, Rot); 4],
+    sides: [(usize, Dir4); 4],
     grid_pos: Pos,
 }
 
+impl std::fmt::Debug for Face {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("face {:?}", self.grid_pos))
+    }
+}
+
 struct CubeMap<const N: usize> {
+    start: usize,
     faces: [Face; 6],
 }
 
@@ -239,27 +269,100 @@ impl<const N: usize> MapRep for CubeMap<N> {
     type Pos = CubePos;
 
     fn new(map: &Grid<Cell>) -> Self {
-        // Collect faces
+        // Collect faces.
         let mut faces = HashMap::new();
-        for x in 0..(map.width() / N) {
-            for y in 0..(map.height() / N) {
+        let mut start = None;
+        for y in 0..(map.height() / N) {
+            for x in 0..(map.width() / N) {
                 let corner = pos(x * N, y * N);
                 if map[corner] != Cell::Nothing {
-                    faces.insert(corner, map.crop_area(corner, corner + pos(N, N)));
+                    faces.insert(pos(x, y), map.crop_area(corner, corner + pos(N, N)));
+                    if start.is_none() {
+                        start = Some(pos(x, y));
+                    }
                 }
             }
         }
-        // Get immediate neighbors
-        // Repeatedly get indirect neighbors
+
+        // Get immediate neighbors.
+        let mut neighbor_map = hashbrown::HashMap::new();
+        for face in faces.keys() {
+            for dir in [Dir4::N, Dir4::E, Dir4::S, Dir4::W] {
+                if let Some(neighbor) = face.step_checked(dir) {
+                    if faces.contains_key(&neighbor) {
+                        neighbor_map
+                            .entry(*face)
+                            .or_insert([None, None, None, None])[dir.to_idx()] =
+                            Some((neighbor, Dir4::N));
+                    }
+                }
+            }
+        }
+
+        // Repeatedly form connections until fully saturated.
+        while neighbor_map
+            .values()
+            .flat_map(|a| a.iter())
+            .any(|x| x.is_none())
+        {
+            // Collect new edges that can be formed.
+            let mut new_edges = Vec::new();
+            for (face, face_neighbors) in &neighbor_map {
+                for (dir_idx, neighbor) in face_neighbors.iter().enumerate() {
+                    if let Some((neighbor, n_orient)) = neighbor {
+                        // Retrieve the direction the neighbor was in.
+                        let n_dir = Dir4::from_idx(dir_idx).unwrap();
+                        // Then figure out the direction to get to the neighbors' neighbor.
+                        let nn_dir = n_dir.rotate(Rot::R).rotate_relative(n_orient.flip_x());
+                        // Check if the neighbor has that neighbor.
+                        let n_neighbors = neighbor_map[neighbor];
+                        if let Some((nn, nn_orient)) = n_neighbors[nn_dir.to_idx()] {
+                            // If so, the neighbors' neighbor should be connected to this face.
+                            let relative_orient =
+                                nn_orient.rotate_relative(*n_orient).rotate(Rot::R);
+                            new_edges.push((*face, n_dir.rotate(Rot::R), nn, relative_orient));
+                        }
+                    }
+                }
+            }
+
+            // Form new edges.
+            for (face, dir, nn, relative_orient) in new_edges.drain(..) {
+                let face_entry = neighbor_map.get_mut(&face).unwrap();
+                face_entry[dir.to_idx()].get_or_insert((nn, relative_orient));
+            }
+        }
+        // Resolve positions to indices
+        let idxs: HashMap<Pos, usize> = faces.keys().enumerate().map(|(p, &i)| (i, p)).collect();
+        let start = idxs[&start.unwrap()];
         // Package for output
-        let faces = todo!();
-        Self { faces }
+        let mut faces = faces
+            .iter()
+            .map(|(grid_pos, grid)| {
+                let neighbors = neighbor_map[grid_pos].map(|neighbor| {
+                    let (n_pos, orient) = neighbor.unwrap();
+                    (idxs[&n_pos], orient)
+                });
+                (idxs[grid_pos], grid_pos, grid, neighbors)
+            })
+            .collect_vec();
+        faces.sort_unstable_by_key(|x| x.0);
+        let faces = faces
+            .into_iter()
+            .map(|(_, &grid_pos, surface, sides)| Face {
+                surface: surface.map(|cell| cell == &Cell::Air),
+                sides,
+                grid_pos: pos(grid_pos.x * N, grid_pos.y * N),
+            })
+            .collect_vec();
+        let faces = faces.try_into().unwrap();
+        Self { faces, start }
     }
 
     fn start(&self) -> CubePos {
         CubePos {
-            face: 0,
-            pos: pos(0, N),
+            face: self.start,
+            pos: pos(0, 0),
             dir: Dir4::E,
         }
     }
@@ -267,25 +370,32 @@ impl<const N: usize> MapRep for CubeMap<N> {
     fn step_fwd(&self, mut p: CubePos) -> CubePos {
         p.pos += pos(N, N);
         p.pos = p.pos.step(p.dir);
+        let overstep = p.pos.x == N - 1 || p.pos.x == N + N || p.pos.y == N - 1 || p.pos.y == N + N;
         p.pos.x %= N;
         p.pos.y %= N;
-        if p.pos.x == N || p.pos.x == 0 || p.pos.y == N || p.pos.y == 0 {
+        if overstep {
             // retrieve new face and coordinate
-            let (new_face, rotation) = self.faces[p.face].sides[p.dir.flip().to_idx()];
+            let (new_face, new_orient) = self.faces[p.face].sides[p.dir.to_idx()];
             // switch to new face
             p.face = new_face;
             // rotate to enter new face correctly
-            p.dir = p.dir.rotate(rotation);
-            match rotation {
-                Rot::L => {
-                    let temp = p.pos.x;
-                    p.pos.x = N - p.pos.y;
-                    p.pos.y = temp;
+            // that is, the opposite of the direction that face is facing
+            match new_orient {
+                Dir4::N => (),
+                Dir4::E => {
+                    p.dir = p.dir.rotate(Rot::L);
+                    p.pos = p.pos.swap_xy();
+                    p.pos.y = N - 1 - p.pos.y;
                 }
-                Rot::R => {
-                    let temp = p.pos.x;
-                    p.pos.x = p.pos.y;
-                    p.pos.y = N - temp;
+                Dir4::W => {
+                    p.dir = p.dir.rotate(Rot::R);
+                    p.pos = p.pos.swap_xy();
+                    p.pos.x = N - 1 - p.pos.x;
+                }
+                Dir4::S => {
+                    p.dir = p.dir.flip();
+                    p.pos.x = N - 1 - p.pos.x;
+                    p.pos.y = N - 1 - p.pos.y;
                 }
             }
         }
@@ -301,22 +411,21 @@ impl<const N: usize> MapRep for CubeMap<N> {
 mod tests {
     #[test]
     fn test() {
-        let input = "\
-                    ...#\n\
-                    .#..\n\
-                    #...\n\
-                    ....\n\
-            ...#.......#\n\
-            ........#...\n\
-            ..#....#....\n\
-            ..........#.\n\
-                    ...#....\n\
-                    .....#..\n\
-                    .#......\n\
-                    ......#.\n\
-            \n\
-            10R5L5R10L4R5L5\n\
-    ";
-        assert_eq!(super::run(input), (6032, 5031));
+        let input = "        ...#
+        .#..
+        #...
+        ....
+...#.......#
+........#...
+..#....#....
+..........#.
+        ...#....
+        .....#..
+        .#......
+        ......#.
+
+10R5L5R10L4R5L5\n\
+        ";
+        assert_eq!(super::run_size::<4>(input), (6032, 5031));
     }
 }

@@ -10,6 +10,7 @@ itertools = "0.10.5"
 comfy-table = "6.1.3"
 nom = "7.1.1"
 fxhash = "0.2.1"
+hashbrown = "0.13.2"
 
 [dev-dependencies]
 criterion = "0.4.0"

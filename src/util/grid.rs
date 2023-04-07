@@ -45,6 +45,27 @@ impl Pos {
         }
     }
 
+    pub fn step_checked(self, dir: Dir4) -> Option<Self> {
+        match dir {
+            Dir4::N => {
+                if self.y == 0 {
+                    None
+                } else {
+                    Some(pos(self.x, self.y - 1))
+                }
+            }
+            Dir4::E => Some(pos(self.x + 1, self.y)),
+            Dir4::S => Some(pos(self.x, self.y + 1)),
+            Dir4::W => {
+                if self.x == 0 {
+                    None
+                } else {
+                    Some(pos(self.x - 1, self.y))
+                }
+            }
+        }
+    }
+
     pub fn step_dir8(self, dir: Dir8) -> Self {
         match dir {
             Dir8::NO => pos(self.x, self.y - 1),
@@ -55,6 +76,13 @@ impl Pos {
             Dir8::SW => pos(self.x - 1, self.y + 1),
             Dir8::WE => pos(self.x - 1, self.y),
             Dir8::NW => pos(self.x - 1, self.y - 1),
+        }
+    }
+
+    pub fn swap_xy(self) -> Self {
+        Pos {
+            x: self.y,
+            y: self.x,
         }
     }
 }
@@ -109,11 +137,28 @@ impl Dir4 {
         }
     }
 
+    pub fn rotate_relative(mut self, mut r: Self) -> Self {
+        while r != Dir4::N {
+            self = self.rotate(Rot::R);
+            r = r.rotate(Rot::L);
+        }
+        self
+    }
+
     pub fn flip(self) -> Self {
         match self {
             Dir4::N => Dir4::S,
             Dir4::E => Dir4::W,
             Dir4::S => Dir4::N,
+            Dir4::W => Dir4::E,
+        }
+    }
+
+    pub fn flip_x(self) -> Self {
+        match self {
+            Dir4::N => Dir4::N,
+            Dir4::E => Dir4::W,
+            Dir4::S => Dir4::S,
             Dir4::W => Dir4::E,
         }
     }
@@ -125,6 +170,17 @@ impl Dir4 {
             Dir4::E => 1,
             Dir4::S => 2,
             Dir4::W => 3,
+        }
+    }
+
+    /// Establish an index standard for lookup tables
+    pub fn from_idx(idx: usize) -> Option<Self> {
+        match idx {
+            0 => Some(Dir4::N),
+            1 => Some(Dir4::E),
+            2 => Some(Dir4::S),
+            3 => Some(Dir4::W),
+            _ => None,
         }
     }
 }

@@ -1,56 +1,30 @@
 use itertools::Itertools;
 
-#[derive(Clone, Debug)]
-enum Op {
-    Add,
-    Mul,
-}
-
-#[derive(Clone, Debug)]
-enum Operand {
-    Old,
-    Num(u64),
-}
-
-impl Operand {
-    fn parse(input: &str) -> Self {
-        input
-            .parse::<u64>()
-            .map_or(Operand::Old, |n| Operand::Num(n))
-    }
-
-    fn get(&self, old: u64) -> u64 {
-        match self {
-            Operand::Old => old,
-            Operand::Num(n) => *n,
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-struct Binop {
-    a: Operand,
-    b: Operand,
-    op: Op,
-}
-
-impl Binop {
-    fn apply(&self, item: u64) -> u64 {
-        let a = self.a.get(item);
-        let b = self.b.get(item);
-        match self.op {
-            Op::Add => a + b,
-            Op::Mul => a * b,
-        }
-    }
-}
+use crate::util::cycles::CycleFinder;
 
 #[derive(Clone, Debug)]
 struct Monkey {
-    op: Binop,
+    op: Op,
     test: u64,
-    pos: usize,
-    neg: usize,
+    positive: usize,
+    negative: usize,
+}
+
+#[derive(Clone, Copy, Debug)]
+enum Op {
+    Add(u64),
+    Mul(u64),
+    Pow2,
+}
+
+impl Op {
+    fn apply(self, lhs: u64) -> u64 {
+        match self {
+            Op::Add(rhs) => lhs + rhs,
+            Op::Mul(rhs) => lhs * rhs,
+            Op::Pow2 => lhs * lhs,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -59,7 +33,7 @@ struct Item {
     worry: u64,
 }
 
-pub fn run(input: &str) -> (usize, usize) {
+pub fn run(input: &str) -> (u64, u64) {
     let make_monkey = |p: &str| {
         let mut lines = p.lines();
         let monkey: usize = lines.next()?[7..].strip_suffix(':')?.parse().ok()?;
@@ -75,15 +49,22 @@ pub fn run(input: &str) -> (usize, usize) {
         let pos: usize = lines.next()?[29..].parse().ok()?;
         let neg: usize = lines.next()?[30..].parse().ok()?;
 
-        let a = Operand::parse(a);
-        let b = Operand::parse(b);
-        let op = match op {
-            "+" => Op::Add,
-            "*" => Op::Mul,
-            _ => panic!(),
+        let op = match (a, op, b) {
+            ("old", "+", "old") => Op::Mul(2), // NOTE: I don't think this one is necessary.
+            ("old", "*", "old") => Op::Pow2,
+            ("old", "+", n) => Op::Add(n.parse().ok()?),
+            ("old", "*", n) => Op::Mul(n.parse().ok()?),
+            _ => return None,
         };
-        let op = Binop { a, b, op };
-        Some((Monkey { op, test, pos, neg }, items))
+        Some((
+            Monkey {
+                op,
+                test,
+                positive: pos,
+                negative: neg,
+            },
+            items,
+        ))
     };
 
     let (mut monkeys, itemss): (Vec<Monkey>, Vec<Vec<Item>>) =
@@ -101,26 +82,70 @@ pub fn run(input: &str) -> (usize, usize) {
     (res1, res2)
 }
 
-fn play<F>(steps: usize, monkeys: &[Monkey], items: &mut [Item], worry_reduction: F) -> usize
+fn play<F>(rounds: u64, monkeys: &[Monkey], items: &mut [Item], worry_reduction: F) -> u64
 where
     F: Fn(u64) -> u64,
 {
-    let mut inspections: Vec<usize> = monkeys.iter().map(|_| 0).collect_vec();
+    let mut inspections: Vec<u64> = monkeys.iter().map(|_| 0).collect_vec();
     for item in items {
-        for _ in 0..steps {
+        let mut finder = CycleFinder::new();
+        let mut rounds_left = rounds;
+        let repeated = 'outer: loop {
+            if rounds_left == 0 {
+                break None;
+            }
             loop {
-                let m = &monkeys[item.monkey];
+                let monkey = &monkeys[item.monkey];
                 inspections[item.monkey] += 1;
-                item.worry = worry_reduction(m.op.apply(item.worry));
-                let new_monkey = if item.worry % m.test == 0 {
-                    m.pos
+                item.worry = worry_reduction(monkey.op.apply(item.worry));
+
+                if let Some(repeated) = finder.push((item.monkey, item.worry % monkey.test)) {
+                    break 'outer Some(repeated);
+                }
+
+                let new_monkey = if item.worry % monkey.test == 0 {
+                    monkey.positive
                 } else {
-                    m.neg
+                    monkey.negative
                 };
                 let stop = new_monkey <= item.monkey;
                 item.monkey = new_monkey;
                 if stop {
                     break;
+                }
+            }
+            rounds_left -= 1;
+        };
+        if let Some(repeated) = repeated {
+            // Find out how many rounds we advance per repetition.
+            let mut rep_rounds = repeated
+                .iter()
+                .tuple_windows()
+                .filter(|((a, _), (b, _))| b <= a)
+                .count() as u64;
+            // also count the beginning of a new repetition
+            if repeated.first().unwrap() <= repeated.last().unwrap() {
+                rep_rounds += 1;
+            }
+
+            // 2. perform as many repetitions as possible
+            let max_repetitions = (rounds_left - 1) / rep_rounds;
+            for &(seq_monkey, _) in repeated {
+                inspections[seq_monkey] += max_repetitions;
+            }
+            rounds_left -= rep_rounds * max_repetitions;
+
+            // 3. handle the tail end
+            if repeated.first().unwrap() <= repeated.last().unwrap() && rounds_left > 0 {
+                rounds_left -= 1;
+            }
+            for ((monkey_a, _), (monkey_b, _)) in repeated.iter().tuple_windows() {
+                if rounds_left == 0 {
+                    break;
+                }
+                inspections[*monkey_a] += 1;
+                if monkey_b <= monkey_a {
+                    rounds_left -= 1;
                 }
             }
         }

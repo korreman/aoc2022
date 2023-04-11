@@ -1,28 +1,78 @@
+use std::hash::Hash;
+
+use fxhash::FxHashMap;
+
 pub struct CycleFinder<T: PartialEq> {
-    sequence: Vec<T>,
+    history: Vec<T>,
     cache: Vec<usize>,
 }
 
 impl<T: PartialEq> CycleFinder<T> {
     pub fn new() -> Self {
         Self {
-            sequence: Vec::new(),
+            history: Vec::new(),
             cache: Vec::new(),
         }
     }
 
     pub fn push(&mut self, value: T) -> Option<&[T]> {
-        self.sequence.push(value);
+        self.history.push(value);
         self.cache.push(0);
-        let len = self.sequence.len();
-        for n in 0..self.sequence.len() {
-            if self.sequence[len - 1 - n] == self.sequence[len - 1] {
+        let len = self.history.len();
+        for n in 0..self.history.len() {
+            if self.history[len - 1 - n] == self.history[len - 1] {
                 self.cache[n] += 1;
                 if self.cache[n] == n {
-                    return Some(&self.sequence[len - n..len]);
+                    return Some(&self.history[len - n..len]);
                 }
             } else {
                 self.cache[n] = 0;
+            }
+        }
+        None
+    }
+}
+
+pub struct CycleFinder2<T: Clone + Eq + Hash + std::fmt::Debug> {
+    // The sequence of values that we are tracking.
+    history: Vec<T>,
+    // Previous occurrences of elements in the sequence.
+    occurrences: FxHashMap<T, Vec<usize>>,
+    // Results of previous tests.
+    cache: Vec<(usize, usize)>,
+}
+
+impl<T: Clone + Eq + Hash + std::fmt::Debug> CycleFinder2<T> {
+    pub fn new() -> Self {
+        Self {
+            history: Vec::new(),
+            occurrences: Default::default(),
+            cache: Vec::new(),
+        }
+    }
+
+    pub fn push(&mut self, value: T) -> Option<&[T]> {
+        // Update history and occurrences of current.
+        let idx = self.history.len();
+        self.history.push(value.clone());
+        let occurrences = self.occurrences.entry(value).or_default();
+        occurrences.push(idx);
+        self.cache.push((0, idx));
+
+        // Iterate through all previous occurrences of element from last to first.
+        for &occurrence in occurrences.iter().rev().skip(1) {
+            let len = idx - occurrence;
+            let (cached_len, cached_idx) = &mut self.cache[len];
+            // If the verified cached sequence extends all the way to this one, increment it.
+            // Else, the sequence is broken, overwrite with length 1.
+            if *cached_idx == idx - 1 {
+                *cached_len += 1;
+            } else {
+                *cached_len = 1;
+            }
+            *cached_idx = idx;
+            if *cached_len == len {
+                return Some(&self.history[self.history.len() - len..self.history.len()]);
             }
         }
         None
@@ -34,7 +84,7 @@ mod test {
     use super::*;
 
     fn test(input: &[u8], output: Option<&[u8]>) {
-        let mut finder = CycleFinder::new();
+        let mut finder = CycleFinder2::new();
         for x in &input[0..input.len() - 1] {
             finder.push(*x);
         }
@@ -42,12 +92,27 @@ mod test {
     }
 
     #[test]
-    fn tests() {
+    fn test1() {
         test(&[1, 1], Some(&[1]));
+    }
+    #[test]
+    fn test2() {
         test(&[3, 1, 2, 1, 2], Some(&[1, 2]));
+    }
+    #[test]
+    fn test3() {
         test(&[1, 2, 3, 1, 2], None);
+    }
+    #[test]
+    fn test4() {
         test(&[1, 4, 2, 1, 2, 4], None);
+    }
+    #[test]
+    fn test5() {
         test(&[1, 2, 3, 6, 1, 2, 3], None);
-        test(&[0, 0, 1, 2, 3, 6, 1, 2, 3, 6], Some(&[1, 2, 3, 6]));
+    }
+    #[test]
+    fn test6() {
+        test(&[0, 7, 1, 2, 3, 6, 1, 2, 3, 6], Some(&[1, 2, 3, 6]));
     }
 }

@@ -1,39 +1,7 @@
 use std::hash::Hash;
-
 use fxhash::FxHashMap;
 
-pub struct CycleFinder<T: PartialEq> {
-    history: Vec<T>,
-    cache: Vec<usize>,
-}
-
-impl<T: PartialEq> CycleFinder<T> {
-    pub fn new() -> Self {
-        Self {
-            history: Vec::new(),
-            cache: Vec::new(),
-        }
-    }
-
-    pub fn push(&mut self, value: T) -> Option<&[T]> {
-        self.history.push(value);
-        self.cache.push(0);
-        let len = self.history.len();
-        for n in 0..self.history.len() {
-            if self.history[len - 1 - n] == self.history[len - 1] {
-                self.cache[n] += 1;
-                if self.cache[n] == n {
-                    return Some(&self.history[len - n..len]);
-                }
-            } else {
-                self.cache[n] = 0;
-            }
-        }
-        None
-    }
-}
-
-pub struct CycleFinder2<T: Clone + Eq + Hash + std::fmt::Debug> {
+pub struct CycleFinder<T: Clone + Eq + Hash + std::fmt::Debug> {
     // The sequence of values that we are tracking.
     history: Vec<T>,
     // Previous occurrences of elements in the sequence.
@@ -42,7 +10,7 @@ pub struct CycleFinder2<T: Clone + Eq + Hash + std::fmt::Debug> {
     cache: Vec<(usize, usize)>,
 }
 
-impl<T: Clone + Eq + Hash + std::fmt::Debug> CycleFinder2<T> {
+impl<T: Clone + Eq + Hash + std::fmt::Debug> CycleFinder<T> {
     pub fn new() -> Self {
         Self {
             history: Vec::new(),
@@ -84,7 +52,7 @@ mod test {
     use super::*;
 
     fn test(input: &[u8], output: Option<&[u8]>) {
-        let mut finder = CycleFinder2::new();
+        let mut finder = CycleFinder::new();
         for x in &input[0..input.len() - 1] {
             finder.push(*x);
         }

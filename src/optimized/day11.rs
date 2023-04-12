@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use crate::util::cycles::{CycleFinder, CycleFinder2};
+use crate::util::cycles::CycleFinder;
 
 #[derive(Clone, Debug)]
 struct Monkey {
@@ -90,7 +90,7 @@ fn play<F: Fn(u64) -> u64>(
 ) -> u64 {
     let mut inspections: Vec<u64> = monkeys.iter().map(|_| 0).collect_vec();
     for item in items {
-        let mut finder = CycleFinder2::new();
+        let mut finder = CycleFinder::new();
         let mut rounds_left = rounds;
         let repeated = 'outer: loop {
             if rounds_left == 0 {

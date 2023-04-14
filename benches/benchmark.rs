@@ -20,7 +20,7 @@ macro_rules! bench {
 }
 
 macro_rules! run_benchmarks {
-    ( $c:ident, $module:ident, $($day:ident),+ ) => {
+    ( $c:ident, $(($module:ident, $day:ident)),+ ) => {
         $( input!($day); )+
         $( bench!($c, $module, $day); )+
         $c.bench_function("all", |b| {b.iter(|| {
@@ -31,10 +31,33 @@ macro_rules! run_benchmarks {
 
 pub fn criterion_benchmark(c: &mut Criterion) {
     run_benchmarks!(
-        c, solutions, day01, day02, day03, day04, day05, day06, day07, day08, day09, day10, day11,
-        day12, day13, day14, day15, day17, day18, day20
+        c,
+        (optimized, day01),
+        (solutions, day02),
+        (solutions, day03),
+        (solutions, day04),
+        (solutions, day05),
+        (optimized, day06),
+        (solutions, day07),
+        (solutions, day08),
+        (solutions, day09),
+        (solutions, day10),
+        (optimized, day11),
+        (solutions, day12),
+        (solutions, day13),
+        (optimized, day14),
+        (optimized, day15),
+        (solutions, day16),
+        (solutions, day17),
+        (solutions, day18),
+        (solutions, day19),
+        (solutions, day20),
+        (solutions, day21),
+        (solutions, day22),
+        (solutions, day23),
+        (optimized, day24),
+        (solutions, day25)
     );
-    run_benchmarks!(c, optimized, day01, day06, day11, day14, day15);
 }
 
 criterion_group!(benches, criterion_benchmark);

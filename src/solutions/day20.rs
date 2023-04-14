@@ -37,10 +37,10 @@ fn task(numbers: &[i64], rounds: usize, multiplier: i64) -> i64 {
     while state[0].1 != 0 {
         state.rotate_left(1);
     }
-    [1000, 2000, 3000]
-        .iter()
-        .map(|n| state[(n) % state.len()].1)
-        .sum()
+    let a = state[1000 % state.len()].1;
+    let b = state[2000 % state.len()].1;
+    let c = state[3000 % state.len()].1;
+    a + b + c
 }
 
 #[cfg(test)]

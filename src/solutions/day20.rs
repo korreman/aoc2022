@@ -11,20 +11,21 @@ pub fn run(input: &str) -> (i64, i64) {
 }
 
 fn task(numbers: &[i64], rounds: usize, multiplier: i64) -> i64 {
+    let len = numbers.len();
+
     // set up state
     let mut state: Vec<(usize, i64)> = numbers
         .iter()
-        .cloned()
-        .map(|n| n * multiplier)
+        .map(|&n| n * multiplier)
         .enumerate()
         .collect();
 
     // shuffle
     for _ in 0..rounds {
-        for n in 0..numbers.len() {
+        for n in 0..len {
             let idx = state.iter().position(|(sn, _)| *sn == n).unwrap();
             let (id, rotation) = state.remove(idx);
-            let offset = (idx as i64 + rotation).rem_euclid(state.len() as i64) as usize;
+            let offset = (idx as i64 + rotation).rem_euclid((len - 1) as i64) as usize;
             state.insert(offset, (id, rotation));
         }
     }
@@ -33,9 +34,9 @@ fn task(numbers: &[i64], rounds: usize, multiplier: i64) -> i64 {
     while state[0].1 != 0 {
         state.rotate_left(1);
     }
-    let a = state[1000 % state.len()].1;
-    let b = state[2000 % state.len()].1;
-    let c = state[3000 % state.len()].1;
+    let a = state[1000 % len].1;
+    let b = state[2000 % len].1;
+    let c = state[3000 % len].1;
     a + b + c
 }
 

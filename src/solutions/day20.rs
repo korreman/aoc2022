@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 pub fn run(input: &str) -> (i64, i64) {
     // parse
     let numbers: Vec<i64> = input
@@ -23,10 +25,13 @@ fn task(numbers: &[i64], rounds: usize, multiplier: i64) -> i64 {
     // shuffle
     for _ in 0..rounds {
         for n in 0..len {
-            let idx = state.iter().position(|(sn, _)| *sn == n).unwrap();
-            let (id, rotation) = state.remove(idx);
-            let offset = (idx as i64 + rotation).rem_euclid((len - 1) as i64) as usize;
-            state.insert(offset, (id, rotation));
+            let (idx, (_, rotation)) = state.iter().find_position(|(sn, _)| *sn == n).unwrap();
+            let target = (idx as i64 + rotation).rem_euclid((len - 1) as i64) as usize;
+            if target > idx {
+                state[idx..=target].rotate_left(1);
+            } else {
+                state[target..=idx].rotate_right(1);
+            }
         }
     }
 

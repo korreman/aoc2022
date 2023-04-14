@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 pub fn run(input: &str) -> (i64, i64) {
     // parse
     let numbers: Vec<i64> = input
@@ -14,7 +12,7 @@ pub fn run(input: &str) -> (i64, i64) {
 
 fn task(numbers: &[i64], rounds: usize, multiplier: i64) -> i64 {
     // set up state
-    let mut state: VecDeque<(usize, i64)> = numbers
+    let mut state: Vec<(usize, i64)> = numbers
         .iter()
         .cloned()
         .map(|n| n * multiplier)
@@ -23,12 +21,10 @@ fn task(numbers: &[i64], rounds: usize, multiplier: i64) -> i64 {
 
     // shuffle
     for _ in 0..rounds {
-        for i in 0..numbers.len() {
-            while state[0].0 != i {
-                state.rotate_left(1);
-            }
-            let (id, rotation) = state.pop_front().unwrap();
-            let offset = rotation.rem_euclid(state.len() as i64) as usize;
+        for n in 0..numbers.len() {
+            let idx = state.iter().position(|(sn, _)| *sn == n).unwrap();
+            let (id, rotation) = state.remove(idx);
+            let offset = (idx as i64 + rotation).rem_euclid(state.len() as i64) as usize;
             state.insert(offset, (id, rotation));
         }
     }

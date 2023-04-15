@@ -1,6 +1,7 @@
 use std::{fmt::Debug, hash::Hash, ops::Index};
 
 use fxhash::FxHashMap;
+use itertools::Itertools;
 
 #[inline(always)]
 pub fn run(input: &str) -> (i64, i64) {
@@ -12,30 +13,35 @@ pub fn run(input: &str) -> (i64, i64) {
 
     let decoded_numbers: Vec<i64> = numbers.iter().map(|n| n * 811_589_153).collect();
 
-    let res1 = task::<BlockSeq<256, u16>>(numbers.as_slice(), 1);
-    let res2 = task::<BlockSeq<256, u16>>(decoded_numbers.as_slice(), 10);
+    let res1 = task::<BlockSeq<200, u16>>(numbers.as_slice(), 1);
+    let res2 = task::<BlockSeq<200, u16>>(decoded_numbers.as_slice(), 10);
     (res1, res2)
 }
 
 #[inline(always)]
-fn task<S: Seq<u16>>(numbers: &[i64], rounds: usize) -> i64 {
-    let len = numbers.len();
-    let mut state = S::from(0..len as u16);
+fn task<S: Seq<u16>>(shifts: &[i64], rounds: usize) -> i64 {
+    let len = shifts.len();
+
+    // normalize shifts according to len
+    let normalized_shifts = shifts
+        .iter()
+        .map(|shift| shift.rem_euclid((shifts.len() - 1) as i64) as usize)
+        .collect_vec();
 
     // shuffle
+    let mut state = S::from(0..len as u16);
     for _ in 0..rounds {
-        for (n, rotation) in numbers.iter().enumerate() {
-            let offset = rotation.rem_euclid((numbers.len() - 1) as i64) as usize;
-            state.shift(n as u16, offset);
+        for (n, shift) in normalized_shifts.iter().enumerate() {
+            state.shift(n as u16, *shift);
         }
     }
 
     // compute result
-    let zero_correspond = numbers.iter().position(|x| x == &0).unwrap() as u16;
+    let zero_correspond = shifts.iter().position(|x| x == &0).unwrap() as u16;
     let zero_idx = state.find(&zero_correspond).unwrap();
-    let a = numbers[state[(zero_idx + 1000) % len] as usize];
-    let b = numbers[state[(zero_idx + 2000) % len] as usize];
-    let c = numbers[state[(zero_idx + 3000) % len] as usize];
+    let a = shifts[state[(zero_idx + 1000) % len] as usize];
+    let b = shifts[state[(zero_idx + 2000) % len] as usize];
+    let c = shifts[state[(zero_idx + 3000) % len] as usize];
     a + b + c
 }
 

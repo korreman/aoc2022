@@ -107,37 +107,34 @@ impl BlockSeq {
 
     #[inline(always)]
     fn shift_right(&mut self, value: u16, mut shift: usize) {
-        // This will increment the block index with wraparound.
-        let num_blocks = self.blocks.len();
-
         // Find the value.
-        let mut curr = self.idxs[value as usize];
-        let offset = self.blocks[curr].iter().position(|x| x == &value).unwrap();
+        let mut block = self.idxs[value as usize];
+        let offset = self.blocks[block].iter().position(|x| x == &value).unwrap();
 
         // Remove the value.
-        self.blocks[curr].remove(offset);
-        self.groups[curr / Self::GROUP] -= 1;
+        self.blocks[block].remove(offset);
+        self.groups[block / Self::GROUP] -= 1;
 
         // Find the new block to place the value in.
         shift += offset;
-        while shift > self.blocks[curr].len() {
-            let group = curr / Self::GROUP;
-            if curr % Self::GROUP == 0 && shift >= self.groups[group] {
+        while shift > self.blocks[block].len() {
+            let group = block / Self::GROUP;
+            if block % Self::GROUP == 0 && shift >= self.groups[group] {
                 shift -= self.groups[group];
-                curr += Self::GROUP;
-                if curr >= num_blocks {
-                    curr = 0;
+                block += Self::GROUP;
+                if block >= self.blocks.len() {
+                    block = 0;
                 }
                 continue;
             }
-            shift -= self.blocks[curr].len();
-            curr = (curr + 1) % num_blocks; //curr = inc(curr);
+            shift -= self.blocks[block].len();
+            block = (block + 1) % self.blocks.len();
         }
 
         // Insert the new value.
-        self.idxs[value as usize] = curr;
-        self.blocks[curr].insert(shift, value);
-        self.groups[curr / Self::GROUP] += 1;
+        self.idxs[value as usize] = block;
+        self.blocks[block].insert(shift, value);
+        self.groups[block / Self::GROUP] += 1;
     }
 
     #[inline(always)]

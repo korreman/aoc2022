@@ -13,8 +13,8 @@ pub fn run(input: &str) -> (i64, i64) {
 
     let decoded_numbers: Vec<i64> = numbers.iter().map(|n| n * 811_589_153).collect();
 
-    let res1 = task::<BlockSeq<256, u16>>(numbers.as_slice(), 1);
-    let res2 = task::<BlockSeq<256, u16>>(decoded_numbers.as_slice(), 10);
+    let res1 = task::<BlockSeq<u16>>(numbers.as_slice(), 1);
+    let res2 = task::<BlockSeq<u16>>(decoded_numbers.as_slice(), 10);
     (res1, res2)
 }
 
@@ -30,11 +30,11 @@ fn task<S: Seq<u16>>(shifts: &[i64], rounds: usize) -> i64 {
 
     // shuffle
     let mut state = S::from(0..len as u16);
-    println!("{state:?}");
+    //println!("{state:?}");
     for _ in 0..rounds {
         for (n, shift) in normalized_shifts.iter().enumerate() {
-            state.shift(n as u16, *shift);
-            println!("{state:?}");
+            state.shift_right(n as u16, *shift);
+            //println!("{state:?}");
         }
     }
 
@@ -49,25 +49,32 @@ fn task<S: Seq<u16>>(shifts: &[i64], rounds: usize) -> i64 {
 
 trait Seq<T: Clone + Eq + Debug>: Index<usize, Output = T> + Debug {
     fn from<I: Iterator<Item = T>>(iter: I) -> Self;
-    fn shift(&mut self, value: T, offset: usize);
+    fn shift_right(&mut self, value: T, offset: usize);
     fn find(&self, value: &T) -> Option<usize>;
 }
 
-struct BlockSeq<const N: usize, T> {
+struct BlockSeq<T> {
     idxs: FxHashMap<T, usize>,
+    groups: Vec<usize>,
     blocks: Vec<Vec<T>>,
 }
 
-impl<const N: usize, T> Debug for BlockSeq<N, T> {
+impl<T> BlockSeq<T> {
+    const N: usize = 128;
+    const GROUP: usize = 8;
+}
+
+impl<T> Debug for BlockSeq<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
-            "{:?}",
-            self.blocks.iter().map(|b| b.len()).collect_vec()
+            "{:?}\n{:?}\n",
+            self.blocks.iter().map(|b| b.len()).collect_vec(),
+            self.groups
         ))
     }
 }
 
-impl<const N: usize, T> Index<usize> for BlockSeq<N, T> {
+impl<T> Index<usize> for BlockSeq<T> {
     type Output = T;
 
     fn index(&self, mut index: usize) -> &Self::Output {
@@ -81,26 +88,39 @@ impl<const N: usize, T> Index<usize> for BlockSeq<N, T> {
     }
 }
 
-impl<const N: usize, T: Clone + Eq + Hash + Debug> Seq<T> for BlockSeq<N, T> {
+impl<T: Clone + Eq + Hash + Debug> Seq<T> for BlockSeq<T> {
     #[inline(always)]
     fn from<I: Iterator<Item = T>>(iter: I) -> Self {
         let mut idxs: FxHashMap<T, usize> = Default::default();
-        let mut blocks = vec![Vec::with_capacity(N * 2)];
+        let mut blocks = vec![Vec::with_capacity(Self::N * 2)];
         for value in iter {
-            if blocks.last().unwrap().len() >= N {
-                blocks.push(Vec::with_capacity(N * 2));
+            if blocks.last().unwrap().len() >= Self::N {
+                blocks.push(Vec::with_capacity(Self::N * 2));
             }
             blocks.last_mut().unwrap().push(value.clone());
             idxs.insert(value, blocks.len() - 1);
         }
-        Self { idxs, blocks }
+        let groups = (0..1 + blocks.len() / Self::GROUP)
+            .map(|group| {
+                let start = group * Self::GROUP;
+                blocks[start..(start + Self::GROUP).min(blocks.len())]
+                    .iter()
+                    .map(|b| b.len())
+                    .sum()
+            })
+            .collect();
+        Self {
+            idxs,
+            blocks,
+            groups,
+        }
     }
 
     #[inline(always)]
-    fn shift(&mut self, value: T, mut amount: usize) {
+    fn shift_right(&mut self, value: T, mut shift: usize) {
         // This will increment the block index with wraparound.
-        let len = self.blocks.len();
-        let inc = |curr: usize| (curr + 1) % len;
+        let num_blocks = self.blocks.len();
+        let inc = |curr: usize| (curr + 1) % num_blocks;
 
         // Find the value.
         let mut curr = self.idxs[&value];
@@ -111,26 +131,42 @@ impl<const N: usize, T: Clone + Eq + Hash + Debug> Seq<T> for BlockSeq<N, T> {
                 curr = inc(curr);
             }
         };
-        // Remove The value.
+        // Remove the value.
         self.blocks[curr].remove(offset);
+        self.groups[curr / Self::GROUP] -= 1;
         // Find the new block to place the value in.
-        amount += offset;
-        while amount > self.blocks[curr].len() {
-            amount -= self.blocks[curr].len();
+        shift += offset;
+        while shift > self.blocks[curr].len() {
+            if curr % Self::GROUP == 0 && shift >= self.groups[curr / Self::GROUP] {
+                shift -= self.groups[curr / Self::GROUP];
+                curr += Self::GROUP;
+                if curr >= num_blocks {
+                    curr = 0;
+                }
+                continue;
+            }
+            shift -= self.blocks[curr].len();
             curr = inc(curr);
         }
         // Insert the new value.
         *self.idxs.get_mut(&value).unwrap() = curr;
-        self.blocks[curr].insert(amount, value);
+        self.blocks[curr].insert(shift, value);
+        self.groups[curr / Self::GROUP] += 1;
 
         // Rebalance the sequence if necessary.
-        if self.blocks[curr].len() >= N * 2 {
-            let mut half = self.blocks[curr].split_off(N);
+        if self.blocks[curr].len() >= Self::N * 2 {
+            let mut half = self.blocks[curr].split_off(Self::N);
+            self.groups[curr / Self::GROUP] -= Self::N;
+
             curr = inc(curr);
-            while self.blocks[curr].len() >= N {
+            while self.blocks[curr].len() + half.len() >= Self::N * 2 {
+                self.groups[curr / Self::GROUP] -= self.blocks[curr].len();
+                self.groups[curr / Self::GROUP] += half.len();
                 std::mem::swap(&mut self.blocks[curr], &mut half);
                 curr = inc(curr);
             }
+
+            self.groups[curr / Self::GROUP] += half.len();
             half.append(&mut self.blocks[curr]);
             std::mem::swap(&mut self.blocks[curr], &mut half);
         }

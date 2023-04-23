@@ -17,7 +17,7 @@ pub fn run(input: &str) -> (u16, u16) {
         .iter()
         .map(|(flow, _, edges)| {
             let edges = edges.iter().map(|edge| idxs[edge]).collect_vec();
-            (flow, edges)
+            (*flow, edges)
         })
         .collect_vec();
 
@@ -57,38 +57,90 @@ pub fn run(input: &str) -> (u16, u16) {
         .map(|(row, col)| weights[row + col * valves.len()].unwrap().get())
         .collect_vec();
 
-    // 2. Find best paths that are possible within 26 minutes.
-    let start = start_flow;
-    let weights = weights_flow;
-    let mut scores: Vec<u16> = vec![0; usize::pow(2, valves_flow.len() as u32)];
+    // 2. Find best path possible within 30 minutes.
+    let graph = Graph {
+        start: start_flow as u16,
+        num_valves: valves_flow.len() as u16,
+        pressures: valves_flow.iter().map(|idx| valves[*idx].0 as u16).collect(),
+        dist_matrix: weights_flow,
+    };
 
-    // 3. Find the pair of non-intersecting paths with the highest combined score.
+    let res1 = graph.dfs(30);
+
+    // 3. Find best paths that are possible within 26 minutes.
+
+    // 4. Find the pair of non-intersecting paths with the highest combined score.
+    let mut scores: Vec<u16> = vec![0; usize::pow(2, valves_flow.len() as u32)];
     let sorted: Vec<u16> = (0..scores.len() as u16)
         .sorted_unstable_by_key(|&idx| scores[idx as usize])
         .collect();
     let mut best = 0;
     for a in (0..sorted.len()).rev() {
-        if scores[a] < best / 2 {
-            // At this point there is no possibility of a better pair.
+        if scores[a] <= best / 2 {
+            // At this point there is no possibility of a better total score.
             break;
         }
         for b in (0..a).rev() {
-            if a ^ b != 0 {
-                let score = scores[a] + scores[b];
-                if score > best {
-                    best = score;
+            // TODO: Benchmark whether the score check or intersection check should happen first.
+            let score = scores[a] + scores[b];
+            if score <= best {
+                break;
+            }
+            if a & b == 0 {
+                best = score;
+            }
+        }
+    }
+    let res2 = best;
+
+    (res1, res2)
+}
+
+struct Graph {
+    start: u16,
+    num_valves: u16,
+    pressures: Vec<u16>,
+    dist_matrix: Vec<u16>,
+}
+
+impl Graph {
+    fn dfs(&self, mut steps_left: u16) -> u16 {
+        let mut best_score: u16 = 0;
+        let mut score = 0;
+
+        let mut visited: u16 = 1 << self.start;
+        let mut stack: Vec<u16> = vec![self.start];
+        let mut next: u16 = 0;
+        loop {
+            if next < self.num_valves { // TODO: && steps_left > 0
+                let current = *stack.last().unwrap();
+                let next_cost = self.dist_matrix[(next + current * self.num_valves) as usize];
+                if next_cost <= steps_left && (1 << next) & visited == 0 {
+                    visited |= 1 << next;
+                    steps_left -= next_cost;
+                    score += self.pressures[next as usize] * steps_left;
+                    stack.push(next);
+                    next = 0;
                 } else {
-                    // We just find the best B path,
-                    // the rest will necessarily be worse.
+                    next += 1;
+                }
+            } else {
+                best_score = best_score.max(score);
+                if stack.len() > 1 {
+                    let prev = stack.pop().unwrap();
+                    score -= self.pressures[prev as usize] * steps_left;
+                    let prev_current = *stack.last().unwrap();
+                    steps_left +=
+                        self.dist_matrix[(prev + prev_current * self.num_valves) as usize];
+                    visited ^= 1 << prev; // TODO: verify correctness
+                    next = prev + 1;
+                } else {
                     break;
                 }
             }
         }
+        best_score
     }
-
-    // 4. Find the best path within 30 minutes, potentially reusing step 2 results.
-
-    (0, 0)
 }
 
 fn parse_valve(line: &str) -> (u64, &str, Vec<&str>) {

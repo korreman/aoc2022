@@ -81,19 +81,19 @@ pub fn run(input: &str) -> (u16, u16) {
         .sorted_unstable_by_key(|&idx| scores[idx as usize])
         .collect();
     let mut best = 0;
-    for a in (0..sorted.len()).rev() {
-        let score_a = scores[sorted[a] as usize];
+    let mut outers = sorted.iter().rev();
+    while let Some(a) = outers.next() {
+        let score_a = scores[*a as usize];
         if score_a * 2 <= best {
             // At this point there is no possibility of a better total score.
             break;
         }
-        for b in (0..a).rev() {
-            let score_b = scores[sorted[b] as usize];
-            // TODO: Benchmark whether the score check or intersection check should happen first.
+        for b in outers.clone().skip(1) {
+            let score_b = scores[*b as usize];
             let score = score_a + score_b;
             if score <= best {
                 break;
-            } else if (sorted[a] & sorted[b]) & !(1 << start_flow) == 0 {
+            } else if (a & b) & !(1 << start_flow) == 0 {
                 best = score;
             }
         }

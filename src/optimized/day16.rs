@@ -34,7 +34,7 @@ fn parse_valve(line: &str) -> Valve {
 }
 
 fn preprocess(valves: Vec<Valve>) -> Graph {
-    // Convert to a vector graph representation.
+    // Collect indices of labels in the sequence.
     let mut idxs = FxHashMap::default();
     // Collect valves that have non-zero flow.
     let mut valves_flow = Vec::new();
@@ -45,6 +45,9 @@ fn preprocess(valves: Vec<Valve>) -> Graph {
         }
     }
     valves_flow.sort_by_key(|idx| Reverse(valves[*idx].flow));
+    valves_flow.push(idxs["AA"]);
+
+    // Resolve labels
     let valves = valves
         .iter()
         .map(|valve| {
@@ -53,16 +56,8 @@ fn preprocess(valves: Vec<Valve>) -> Graph {
         })
         .collect_vec();
 
-    let start = idxs["AA"];
-    let start_flow = match valves_flow.iter().position(|x| x == &start) {
-        Some(idx) => idx,
-        None => {
-            valves_flow.push(start);
-            valves_flow.len() - 1
-        }
-    };
-
-    let mut weights = vec![None; valves_flow.len() * valves.len()];
+    // Use BFS to compute distances to all nodes from flow nodes.
+    let mut dist_matrix = vec![None; valves_flow.len() * valves.len()];
     for (col, &src) in valves_flow.iter().enumerate() {
         let mut handles = vec![src];
         let mut handles_other = Vec::new();
@@ -70,7 +65,7 @@ fn preprocess(valves: Vec<Valve>) -> Graph {
         while !handles.is_empty() {
             step += 1;
             for tgt in &handles {
-                let weight = &mut weights[tgt + col * valves.len()];
+                let weight = &mut dist_matrix[tgt + col * valves.len()];
                 if weight.is_none() {
                     handles_other.extend_from_slice(&valves[*tgt].1);
                     *weight = Some(core::num::NonZeroU16::new(step).unwrap());
@@ -82,20 +77,22 @@ fn preprocess(valves: Vec<Valve>) -> Graph {
             handles.dedup();
         }
     }
-    let weights_flow = valves_flow
+
+    // Sort out nodes that aren't flow nodes to generate a distance matrix.
+    let dist_matrix = valves_flow
         .iter()
         .cartesian_product(0..valves_flow.len())
-        .map(|(row, col)| weights[row + col * valves.len()].unwrap().get())
+        .map(|(row, col)| dist_matrix[row + col * valves.len()].unwrap().get())
         .collect_vec();
 
     Graph {
-        start: start_flow as u16,
+        start: (valves_flow.len() - 1) as u16,
         num_valves: valves_flow.len() as u16,
         pressures: valves_flow
             .iter()
             .map(|idx| valves[*idx].0 as u16)
             .collect(),
-        dist_matrix: weights_flow,
+        dist_matrix,
     }
 }
 
@@ -198,20 +195,21 @@ impl Graph {
 }
 
 fn best_pair(graph: &Graph, scores: &Vec<u16>) -> u16 {
-    let mut sorted: Vec<u32> = (0..scores.len() as u32)
+    // Collect and sort indices of scores.
+    let mut sorted: Vec<usize> = (0..scores.len() as usize)
         .filter(|&idx| scores[idx as usize] > 0)
         .collect();
-    sorted.sort_unstable_by_key(|&idx| scores[idx as usize]);
+    sorted.sort_unstable_by_key(|&idx| Reverse(scores[idx]));
+
+    // Find the pair with maximum sum that doesn't bitwise overlap.
     let mut best = 0;
-    let mut outers = sorted.iter().rev();
-    while let Some(a) = outers.next() {
-        let score_a = scores[*a as usize];
-        if score_a * 2 <= best {
+    let mut outers = sorted.iter();
+    while let Some(&a) = outers.next() {
+        if scores[a] * 2 <= best {
             break;
         }
-        for b in outers.clone().skip(1) {
-            let score_b = scores[*b as usize];
-            let score = score_a + score_b;
+        for &b in outers.clone().skip(1) {
+            let score = scores[a] + scores[b];
             if score <= best {
                 break;
             } else if (a & b) & !(1 << graph.start) == 0 {

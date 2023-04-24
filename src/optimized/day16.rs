@@ -212,7 +212,7 @@ fn best_pair(graph: &Graph, scores: &Vec<u16>) -> u16 {
             let score = scores[a] + scores[b];
             if score <= best {
                 break;
-            } else if (a & b) & !(1 << graph.start) == 0 {
+            } else if a & b == 0 {
                 best = score;
             }
         }

@@ -105,14 +105,14 @@ struct Graph {
 
 impl Graph {
     fn dfs(&self, mut steps_left: u16) -> Vec<u16> {
-        let mut scores: Vec<u16> = vec![0; usize::pow(2, self.num_valves as u32)];
+        let mut scores: Vec<u16> = vec![0; usize::pow(2, self.num_valves as u32 - 1)];
         let mut score = 0;
 
-        let mut visited: u16 = 1 << self.start;
+        let mut visited: u16 = 0;
         let mut stack: Vec<u16> = vec![self.start];
         let mut next: u16 = 0;
         loop {
-            if next < self.num_valves {
+            if next < self.num_valves - 1 {
                 let current = *stack.last().unwrap();
                 let next_cost = self.dist_matrix[(next + current * self.num_valves) as usize];
                 if next_cost <= steps_left && (1 << next) & visited == 0 {
@@ -162,8 +162,8 @@ impl Graph {
                     let bound = score
                         + self.pressures[next as usize] * steps_left
                         + remaining_valves
-                            .zip((0..steps_left - next_cost).rev())
-                            .map(|(a, b)| a * b)
+                            .zip((0..(steps_left - next_cost) / 2).rev())
+                            .map(|(v, s)| v * s * 2)
                             .sum::<u16>();
                     if bound <= best_score {
                         next += 1;
@@ -196,19 +196,19 @@ impl Graph {
 
 fn best_pair(graph: &Graph, scores: &Vec<u16>) -> u16 {
     // Collect and sort indices of scores.
-    let mut sorted: Vec<usize> = (0..scores.len() as usize)
+    let mut best_paths: Vec<usize> = (0..scores.len() as usize)
         .filter(|&idx| scores[idx as usize] > 0)
         .collect();
-    sorted.sort_unstable_by_key(|&idx| Reverse(scores[idx]));
+    best_paths.sort_unstable_by_key(|&idx| Reverse(scores[idx]));
 
     // Find the pair with maximum sum that doesn't bitwise overlap.
     let mut best = 0;
-    let mut outers = sorted.iter();
-    while let Some(&a) = outers.next() {
+    let mut iter = best_paths.iter();
+    while let Some(&a) = iter.next() {
         if scores[a] * 2 <= best {
             break;
         }
-        for &b in outers.clone().skip(1) {
+        for &b in iter.clone().skip(1) {
             let score = scores[a] + scores[b];
             if score <= best {
                 break;

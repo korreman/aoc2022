@@ -1,25 +1,55 @@
+use std::cmp::Reverse;
 use std::mem::swap;
 
 use fxhash::FxHashMap;
 use itertools::Itertools;
 
 pub fn run(input: &str) -> (u16, u16) {
+    let valves = parse(input);
+    let graph = preprocess(valves);
+    let res1 = graph.branch_and_bound(30);
+    let scores = graph.dfs(26);
+    let res2 = best_pair(&graph, &scores);
+    (res1, res2)
+}
+
+struct Valve<'a> {
+    flow: u16,
+    label: &'a str,
+    tunnels: Vec<&'a str>,
+}
+
+fn parse(input: &str) -> Vec<Valve> {
+    input.lines().map(parse_valve).collect_vec()
+}
+
+fn parse_valve(line: &str) -> Valve {
+    let words = line.split([' ', '=', ',', ';']).filter(|w| !w.is_empty());
+    let mut words = words.skip(1);
+    let label = words.next().unwrap();
+    let mut words = words.skip(3);
+    let flow = words.next().unwrap().parse().ok().unwrap();
+    let tunnels = words.skip(4).collect_vec();
+    Valve { flow, label, tunnels }
+}
+
+fn preprocess(valves: Vec<Valve>) -> Graph {
+    // Convert to a vector graph representation.
     let mut idxs = FxHashMap::default();
-    let valves = input.lines().map(parse_valve).collect_vec();
+    // Collect valves that have non-zero flow.
     let mut valves_flow = Vec::new();
-    for (idx, (flow, name, _)) in valves.iter().enumerate() {
-        idxs.insert(*name, idx);
-        if *flow > 0 {
+    for (idx, valve) in valves.iter().enumerate() {
+        idxs.insert(valve.label, idx);
+        if valve.flow > 0 {
             valves_flow.push(idx);
         }
     }
-    valves_flow.sort_by_key(|idx| valves[*idx].0);
-    valves_flow.reverse();
+    valves_flow.sort_by_key(|idx| Reverse(valves[*idx].flow));
     let valves = valves
         .iter()
-        .map(|(flow, _, edges)| {
-            let edges = edges.iter().map(|edge| idxs[edge]).collect_vec();
-            (*flow, edges)
+        .map(|valve| {
+            let tunnels = valve.tunnels.iter().map(|edge| idxs[edge]).collect_vec();
+            (valve.flow, tunnels)
         })
         .collect_vec();
 
@@ -32,7 +62,6 @@ pub fn run(input: &str) -> (u16, u16) {
         }
     };
 
-    // 1. Find all-pairs shortest path between valves with non-zero flow.
     let mut weights = vec![None; valves_flow.len() * valves.len()];
     for (col, &src) in valves_flow.iter().enumerate() {
         let mut handles = vec![src];
@@ -59,8 +88,7 @@ pub fn run(input: &str) -> (u16, u16) {
         .map(|(row, col)| weights[row + col * valves.len()].unwrap().get())
         .collect_vec();
 
-    // 2. Find best path possible within 30 minutes.
-    let graph = Graph {
+    Graph {
         start: start_flow as u16,
         num_valves: valves_flow.len() as u16,
         pressures: valves_flow
@@ -68,39 +96,7 @@ pub fn run(input: &str) -> (u16, u16) {
             .map(|idx| valves[*idx].0 as u16)
             .collect(),
         dist_matrix: weights_flow,
-    };
-
-    let res1 = graph.branch_and_bound(30);
-
-    // 3. Find best paths that are possible within 26 minutes.
-    let scores = graph.dfs(26);
-
-    // 4. Find the pair of non-intersecting paths with the highest combined score.
-    let sorted: Vec<u32> = (0..scores.len() as u32)
-        .filter(|&idx| scores[idx as usize] > 0)
-        .sorted_unstable_by_key(|&idx| scores[idx as usize])
-        .collect();
-    let mut best = 0;
-    let mut outers = sorted.iter().rev();
-    while let Some(a) = outers.next() {
-        let score_a = scores[*a as usize];
-        if score_a * 2 <= best {
-            // At this point there is no possibility of a better total score.
-            break;
-        }
-        for b in outers.clone().skip(1) {
-            let score_b = scores[*b as usize];
-            let score = score_a + score_b;
-            if score <= best {
-                break;
-            } else if (a & b) & !(1 << start_flow) == 0 {
-                best = score;
-            }
-        }
     }
-    let res2 = best;
-
-    (res1, res2)
 }
 
 struct Graph {
@@ -120,7 +116,6 @@ impl Graph {
         let mut next: u16 = 0;
         loop {
             if next < self.num_valves {
-                // TODO: && steps_left > 0
                 let current = *stack.last().unwrap();
                 let next_cost = self.dist_matrix[(next + current * self.num_valves) as usize];
                 if next_cost <= steps_left && (1 << next) & visited == 0 {
@@ -155,7 +150,6 @@ impl Graph {
         let mut stack: Vec<u16> = vec![self.start];
         let mut next: u16 = 0;
         loop {
-            // TODO: && steps_left > 0
             if next < self.num_valves {
                 let current = *stack.last().unwrap();
                 let next_cost = self.dist_matrix[(next + current * self.num_valves) as usize];
@@ -203,14 +197,29 @@ impl Graph {
     }
 }
 
-fn parse_valve(line: &str) -> (u64, &str, Vec<&str>) {
-    let words = line.split([' ', '=', ',', ';']).filter(|w| !w.is_empty());
-    let mut words = words.skip(1);
-    let label = words.next().unwrap();
-    let mut words = words.skip(3);
-    let flow = words.next().unwrap().parse().ok().unwrap();
-    let tunnels = words.skip(4).collect_vec();
-    (flow, label, tunnels)
+fn best_pair(graph: &Graph, scores: &Vec<u16>) -> u16 {
+    let mut sorted: Vec<u32> = (0..scores.len() as u32)
+        .filter(|&idx| scores[idx as usize] > 0)
+        .collect();
+    sorted.sort_unstable_by_key(|&idx| scores[idx as usize]);
+    let mut best = 0;
+    let mut outers = sorted.iter().rev();
+    while let Some(a) = outers.next() {
+        let score_a = scores[*a as usize];
+        if score_a * 2 <= best {
+            break;
+        }
+        for b in outers.clone().skip(1) {
+            let score_b = scores[*b as usize];
+            let score = score_a + score_b;
+            if score <= best {
+                break;
+            } else if (a & b) & !(1 << graph.start) == 0 {
+                best = score;
+            }
+        }
+    }
+    best
 }
 
 #[cfg(test)]

@@ -1,15 +1,15 @@
-use std::cmp::Reverse;
-use std::mem::swap;
-
 use fxhash::FxHashMap;
 use itertools::Itertools;
+
+use std::cmp::Reverse;
+use std::mem::swap;
 
 pub fn run(input: &str) -> (u16, u16) {
     let valves = parse(input);
     let graph = preprocess(valves);
     let res1 = graph.branch_and_bound(30);
     let scores = graph.dfs(26);
-    let res2 = best_pair(&graph, &scores);
+    let res2 = best_pair(&scores);
     (res1, res2)
 }
 
@@ -85,40 +85,47 @@ fn preprocess(valves: Vec<Valve>) -> Graph {
         .map(|(row, col)| dist_matrix[row + col * valves.len()].unwrap().get())
         .collect_vec();
 
+    let mut best_dist = u16::MAX;
+    for valve in 0..valves_flow.len() {
+        for other in 0..valves_flow.len() {
+            if valve == other {
+                continue;
+            }
+            best_dist = best_dist.min(dist_matrix[valve + valves_flow.len() * other]);
+        }
+    }
     Graph {
         start: (valves_flow.len() - 1) as u16,
-        num_valves: valves_flow.len() as u16,
-        pressures: valves_flow
-            .iter()
-            .map(|idx| valves[*idx].0 as u16)
-            .collect(),
+        valves: valves_flow.iter().map(|idx| valves[*idx].0).collect(),
         dist_matrix,
+        best_dist,
     }
 }
 
 struct Graph {
     start: u16,
-    num_valves: u16,
-    pressures: Vec<u16>,
+    valves: Vec<u16>,
     dist_matrix: Vec<u16>,
+    best_dist: u16,
 }
 
 impl Graph {
     fn dfs(&self, mut steps_left: u16) -> Vec<u16> {
-        let mut scores: Vec<u16> = vec![0; usize::pow(2, self.num_valves as u32 - 1)];
+        let num_valves = self.valves.len();
+        let mut scores: Vec<u16> = vec![0; usize::pow(2, num_valves as u32 - 1)];
         let mut score = 0;
 
         let mut visited: u16 = 0;
         let mut stack: Vec<u16> = vec![self.start];
         let mut next: u16 = 0;
         loop {
-            if next < self.num_valves - 1 {
+            if next < num_valves as u16 - 1 {
                 let current = *stack.last().unwrap();
-                let next_cost = self.dist_matrix[(next + current * self.num_valves) as usize];
+                let next_cost = self.dist_matrix[next as usize + current as usize * num_valves];
                 if next_cost <= steps_left && (1 << next) & visited == 0 {
                     visited |= 1 << next;
                     steps_left -= next_cost;
-                    score += self.pressures[next as usize] * steps_left;
+                    score += self.valves[next as usize] * steps_left;
                     stack.push(next);
                     next = 0;
                     scores[visited as usize] = scores[visited as usize].max(score);
@@ -127,9 +134,9 @@ impl Graph {
                 }
             } else if stack.len() > 1 {
                 let prev = stack.pop().unwrap();
-                score -= self.pressures[prev as usize] * steps_left;
+                score -= self.valves[prev as usize] * steps_left;
                 let prev_current = *stack.last().unwrap();
-                steps_left += self.dist_matrix[(prev + prev_current * self.num_valves) as usize];
+                steps_left += self.dist_matrix[prev as usize + prev_current as usize * num_valves];
                 visited &= !(1 << prev);
                 next = prev + 1;
             } else {
@@ -140,6 +147,7 @@ impl Graph {
     }
 
     fn branch_and_bound(&self, mut steps_left: u16) -> u16 {
+        let num_valves = self.valves.len();
         let mut best_score: u16 = 0;
         let mut score = 0;
 
@@ -147,24 +155,23 @@ impl Graph {
         let mut stack: Vec<u16> = vec![self.start];
         let mut next: u16 = 0;
         loop {
-            if next < self.num_valves {
+            if next < num_valves as u16 {
                 let current = *stack.last().unwrap();
-                let next_cost = self.dist_matrix[(next + current * self.num_valves) as usize];
+                let next_cost = self.dist_matrix[next as usize + current as usize * num_valves];
                 if next_cost <= steps_left && (1 << next) & visited == 0 {
                     // bound guard
-                    let remaining_valves = (0..self.num_valves).filter_map(|valve| {
-                        if (1 << valve) & visited == 0 && valve != next {
-                            Some(self.pressures[valve as usize])
-                        } else {
-                            None
+                    let mut bound = score + self.valves[next as usize] * (steps_left - next_cost);
+                    let mut steps_left_hypo = steps_left - next_cost;
+                    for valve in 0..num_valves as u16 {
+                        if (1 << valve) & visited != 0
+                            || valve == next
+                            || steps_left_hypo < self.best_dist
+                        {
+                            continue;
                         }
-                    });
-                    let bound = score
-                        + self.pressures[next as usize] * steps_left
-                        + remaining_valves
-                            .zip((0..(steps_left - next_cost) / 2).rev())
-                            .map(|(v, s)| v * s * 2)
-                            .sum::<u16>();
+                        steps_left_hypo -= self.best_dist;
+                        bound += self.valves[valve as usize] * steps_left_hypo;
+                    }
                     if bound <= best_score {
                         next += 1;
                         continue;
@@ -172,7 +179,7 @@ impl Graph {
                     // advance
                     visited |= 1 << next;
                     steps_left -= next_cost;
-                    score += self.pressures[next as usize] * steps_left;
+                    score += self.valves[next as usize] * steps_left;
                     best_score = best_score.max(score);
                     stack.push(next);
                     next = 0;
@@ -181,9 +188,9 @@ impl Graph {
                 }
             } else if stack.len() > 1 {
                 let prev = stack.pop().unwrap();
-                score -= self.pressures[prev as usize] * steps_left;
+                score -= self.valves[prev as usize] * steps_left;
                 let prev_current = *stack.last().unwrap();
-                steps_left += self.dist_matrix[(prev + prev_current * self.num_valves) as usize];
+                steps_left += self.dist_matrix[prev as usize + prev_current as usize * num_valves];
                 visited ^= 1 << prev;
                 next = prev + 1;
             } else {
@@ -194,11 +201,9 @@ impl Graph {
     }
 }
 
-fn best_pair(graph: &Graph, scores: &Vec<u16>) -> u16 {
+fn best_pair(scores: &Vec<u16>) -> u16 {
     // Collect and sort indices of scores.
-    let mut best_paths: Vec<usize> = (0..scores.len() as usize)
-        .filter(|&idx| scores[idx as usize] > 0)
-        .collect();
+    let mut best_paths: Vec<usize> = (0..scores.len()).filter(|&idx| scores[idx] > 0).collect();
     best_paths.sort_unstable_by_key(|&idx| Reverse(scores[idx]));
 
     // Find the pair with maximum sum that doesn't bitwise overlap.

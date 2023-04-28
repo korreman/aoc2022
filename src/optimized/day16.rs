@@ -9,10 +9,10 @@ pub fn run(input: &str) -> (u16, u16) {
     let graph = preprocess(valves);
 
     let bound1 = BranchState::new(&graph, 30).branch_and_bound::<BestBound>();
-    let res1 = bound1.best;
+    let res1 = bound1.best();
 
     let bound2 = BranchState::new(&graph, 26).branch_and_bound::<ComplementBound>();
-    let res2 = best_pair(&bound2.bests);
+    let res2 = bound2.best();
 
     (res1, res2)
 }
@@ -134,6 +134,7 @@ impl<'a> BranchState<'a> {
         }
     }
 
+    #[inline(always)]
     fn branch_and_bound<B: Bound>(&mut self) -> B {
         let mut bound = B::new(self.graph.num_valves as u32);
         loop {
@@ -183,6 +184,7 @@ trait Bound {
     fn new(num_valves: u32) -> Self;
     fn update(&mut self, b: &BranchState);
     fn better(&self, b: &BranchState, g: &Graph, next_cost: u16) -> bool;
+    fn best(&self) -> u16;
 }
 
 struct BestBound {
@@ -213,6 +215,11 @@ impl Bound for BestBound {
         }
         bound > self.best
     }
+
+    #[inline(always)]
+    fn best(&self) -> u16 {
+        self.best
+    }
 }
 
 struct ComplementBound {
@@ -235,30 +242,32 @@ impl Bound for ComplementBound {
     fn better(&self, b: &BranchState, g: &Graph, next_cost: u16) -> bool {
         true
     }
-}
 
-fn best_pair(scores: &Vec<u16>) -> u16 {
-    // Collect and sort indices of scores.
-    let mut best_paths: Vec<usize> = (0..scores.len()).filter(|&idx| scores[idx] > 0).collect();
-    best_paths.sort_unstable_by_key(|&idx| Reverse(scores[idx]));
+    #[inline(always)]
+    fn best(&self) -> u16 {
+        let bests = &self.bests;
+        // Collect and sort indices of bests.
+        let mut best_paths: Vec<usize> = (0..bests.len()).filter(|&idx| bests[idx] > 0).collect();
+        best_paths.sort_unstable_by_key(|&idx| Reverse(bests[idx]));
 
-    // Find the pair with maximum sum that doesn't bitwise overlap.
-    let mut best = 0;
-    let mut iter = best_paths.iter();
-    while let Some(&a) = iter.next() {
-        if scores[a] * 2 <= best {
-            break;
-        }
-        for &b in iter.clone().skip(1) {
-            let score = scores[a] + scores[b];
-            if score <= best {
+        // Find the pair with maximum sum that doesn't bitwise overlap.
+        let mut best = 0;
+        let mut iter = best_paths.iter();
+        while let Some(&a) = iter.next() {
+            if bests[a] * 2 <= best {
                 break;
-            } else if a & b == 0 {
-                best = score;
+            }
+            for &b in iter.clone().skip(1) {
+                let score = bests[a] + bests[b];
+                if score <= best {
+                    break;
+                } else if a & b == 0 {
+                    best = score;
+                }
             }
         }
+        best
     }
-    best
 }
 
 #[cfg(test)]

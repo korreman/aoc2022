@@ -7,9 +7,13 @@ use std::mem::swap;
 pub fn run(input: &str) -> (u16, u16) {
     let valves = parse(input);
     let graph = preprocess(valves);
-    let res1 = graph.branch_and_bound(30);
-    let scores = graph.dfs(26);
-    let res2 = best_pair(&scores);
+
+    let bound1 = BranchState::new(&graph, 30).branch_and_bound::<BestBound>();
+    let res1 = bound1.best;
+
+    let bound2 = BranchState::new(&graph, 26).branch_and_bound::<ComplementBound>();
+    let res2 = best_pair(&bound2.bests);
+
     (res1, res2)
 }
 
@@ -31,6 +35,13 @@ fn parse_valve(line: &str) -> Valve {
     let flow = words.next().unwrap().parse().ok().unwrap();
     let tunnels = words.skip(4).collect_vec();
     Valve { flow, label, tunnels }
+}
+
+struct Graph {
+    num_valves: usize,
+    valves: Vec<u16>,
+    dist_matrix: Vec<u16>,
+    best_dist: u16,
 }
 
 fn preprocess(valves: Vec<Valve>) -> Graph {
@@ -95,109 +106,136 @@ fn preprocess(valves: Vec<Valve>) -> Graph {
         }
     }
     Graph {
-        start: (valves_flow.len() - 1) as u16,
+        num_valves: valves_flow.len(),
         valves: valves_flow.iter().map(|idx| valves[*idx].0).collect(),
         dist_matrix,
         best_dist,
     }
 }
 
-struct Graph {
-    start: u16,
-    valves: Vec<u16>,
-    dist_matrix: Vec<u16>,
-    best_dist: u16,
+struct BranchState<'a> {
+    graph: &'a Graph,
+    visited: u16,
+    stack: Vec<u16>,
+    next: u16,
+    score: u16,
+    steps_left: u16,
 }
 
-impl Graph {
-    fn dfs(&self, mut steps_left: u16) -> Vec<u16> {
-        let num_valves = self.valves.len();
-        let mut scores: Vec<u16> = vec![0; usize::pow(2, num_valves as u32 - 1)];
-        let mut score = 0;
-
-        let mut visited: u16 = 0;
-        let mut stack: Vec<u16> = vec![self.start];
-        let mut next: u16 = 0;
-        loop {
-            if next < num_valves as u16 - 1 {
-                let current = *stack.last().unwrap();
-                let next_cost = self.dist_matrix[next as usize + current as usize * num_valves];
-                if next_cost <= steps_left && (1 << next) & visited == 0 {
-                    visited |= 1 << next;
-                    steps_left -= next_cost;
-                    score += self.valves[next as usize] * steps_left;
-                    stack.push(next);
-                    next = 0;
-                    scores[visited as usize] = scores[visited as usize].max(score);
-                } else {
-                    next += 1;
-                }
-            } else if stack.len() > 1 {
-                let prev = stack.pop().unwrap();
-                score -= self.valves[prev as usize] * steps_left;
-                let prev_current = *stack.last().unwrap();
-                steps_left += self.dist_matrix[prev as usize + prev_current as usize * num_valves];
-                visited &= !(1 << prev);
-                next = prev + 1;
-            } else {
-                break;
-            }
+impl<'a> BranchState<'a> {
+    fn new(graph: &'a Graph, steps_left: u16) -> Self {
+        Self {
+            graph,
+            visited: 0,
+            stack: vec![(graph.valves.len() - 1) as u16],
+            next: 0,
+            score: 0,
+            steps_left,
         }
-        scores
     }
 
-    fn branch_and_bound(&self, mut steps_left: u16) -> u16 {
-        let num_valves = self.valves.len();
-        let mut best_score: u16 = 0;
-        let mut score = 0;
-
-        let mut visited: u16 = 1 << self.start;
-        let mut stack: Vec<u16> = vec![self.start];
-        let mut next: u16 = 0;
+    fn branch_and_bound<B: Bound>(&mut self) -> B {
+        let mut bound = B::new(self.graph.num_valves as u32);
         loop {
-            if next < num_valves as u16 {
-                let current = *stack.last().unwrap();
-                let next_cost = self.dist_matrix[next as usize + current as usize * num_valves];
-                if next_cost <= steps_left && (1 << next) & visited == 0 {
-                    // bound guard
-                    let mut bound = score + self.valves[next as usize] * (steps_left - next_cost);
-                    let mut steps_left_hypo = steps_left - next_cost;
-                    for valve in 0..num_valves as u16 {
-                        if (1 << valve) & visited != 0
-                            || valve == next
-                            || steps_left_hypo < self.best_dist
-                        {
-                            continue;
-                        }
-                        steps_left_hypo -= self.best_dist;
-                        bound += self.valves[valve as usize] * steps_left_hypo;
-                    }
-                    if bound <= best_score {
-                        next += 1;
+            if self.next < self.graph.num_valves as u16 - 1 {
+                let current = *self.stack.last().unwrap();
+                let next_cost = self.graph.dist_matrix
+                    [self.next as usize + current as usize * self.graph.num_valves];
+                if next_cost <= self.steps_left && (1 << self.next) & self.visited == 0 {
+                    if !bound.better(&self, &self.graph, next_cost) {
+                        self.next += 1;
                         continue;
                     }
-                    // advance
-                    visited |= 1 << next;
-                    steps_left -= next_cost;
-                    score += self.valves[next as usize] * steps_left;
-                    best_score = best_score.max(score);
-                    stack.push(next);
-                    next = 0;
+                    self.advance(&self.graph, next_cost);
+                    bound.update(&self);
                 } else {
-                    next += 1;
+                    self.next += 1;
                 }
-            } else if stack.len() > 1 {
-                let prev = stack.pop().unwrap();
-                score -= self.valves[prev as usize] * steps_left;
-                let prev_current = *stack.last().unwrap();
-                steps_left += self.dist_matrix[prev as usize + prev_current as usize * num_valves];
-                visited ^= 1 << prev;
-                next = prev + 1;
+            } else if self.stack.len() > 1 {
+                self.backtrack(&self.graph);
             } else {
                 break;
             }
         }
-        best_score
+        bound
+    }
+
+    #[inline(always)]
+    fn advance(&mut self, graph: &Graph, next_cost: u16) {
+        self.visited |= 1 << self.next;
+        self.steps_left -= next_cost;
+        self.score += graph.valves[self.next as usize] * self.steps_left;
+        self.stack.push(self.next);
+        self.next = 0;
+    }
+
+    #[inline(always)]
+    fn backtrack(&mut self, graph: &Graph) {
+        let prev = self.stack.pop().unwrap();
+        self.score -= graph.valves[prev as usize] * self.steps_left;
+        let prev_current = *self.stack.last().unwrap();
+        self.steps_left +=
+            graph.dist_matrix[prev as usize + prev_current as usize * graph.num_valves];
+        self.visited ^= 1 << prev;
+        self.next = prev + 1;
+    }
+}
+
+trait Bound {
+    fn new(num_valves: u32) -> Self;
+    fn update(&mut self, b: &BranchState);
+    fn better(&self, b: &BranchState, g: &Graph, next_cost: u16) -> bool;
+}
+
+struct BestBound {
+    best: u16,
+}
+
+impl Bound for BestBound {
+    #[inline(always)]
+    fn new(_: u32) -> Self {
+        Self { best: 0 }
+    }
+
+    #[inline(always)]
+    fn update(&mut self, b: &BranchState) {
+        self.best = self.best.max(b.score);
+    }
+
+    #[inline(always)]
+    fn better(&self, b: &BranchState, g: &Graph, next_cost: u16) -> bool {
+        let mut bound = b.score + g.valves[b.next as usize] * (b.steps_left - next_cost);
+        let mut steps_left_hypo = b.steps_left - next_cost;
+        for valve in 0..g.num_valves as u16 {
+            if (1 << valve) & b.visited != 0 || valve == b.next || steps_left_hypo < g.best_dist {
+                continue;
+            }
+            steps_left_hypo -= g.best_dist;
+            bound += g.valves[valve as usize] * steps_left_hypo;
+        }
+        bound > self.best
+    }
+}
+
+struct ComplementBound {
+    bests: Vec<u16>,
+}
+
+impl Bound for ComplementBound {
+    #[inline(always)]
+    fn new(num_valves: u32) -> Self {
+        Self { bests: vec![0; usize::pow(2, num_valves - 1)] }
+    }
+
+    #[inline(always)]
+    fn update(&mut self, b: &BranchState) {
+        let visited = b.visited as usize;
+        self.bests[visited] = self.bests[visited].max(b.score);
+    }
+
+    #[inline(always)]
+    fn better(&self, b: &BranchState, g: &Graph, next_cost: u16) -> bool {
+        true
     }
 }
 

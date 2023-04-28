@@ -116,8 +116,8 @@ fn preprocess(valves: Vec<Valve>) -> Graph {
 struct BranchState<'a> {
     graph: &'a Graph,
     visited: u16,
-    stack: Vec<u16>,
-    next: u16,
+    stack: Vec<usize>,
+    next: usize,
     score: u16,
     steps_left: u16,
 }
@@ -127,7 +127,7 @@ impl<'a> BranchState<'a> {
         Self {
             graph,
             visited: 0,
-            stack: vec![(graph.valves.len() - 1) as u16],
+            stack: vec![graph.valves.len() - 1],
             next: 0,
             score: 0,
             steps_left,
@@ -137,10 +137,9 @@ impl<'a> BranchState<'a> {
     fn branch_and_bound<B: Bound>(&mut self) -> B {
         let mut bound = B::new(self.graph.num_valves as u32);
         loop {
-            if self.next < self.graph.num_valves as u16 - 1 {
+            if self.next < self.graph.num_valves - 1 {
                 let current = *self.stack.last().unwrap();
-                let next_cost = self.graph.dist_matrix
-                    [self.next as usize + current as usize * self.graph.num_valves];
+                let next_cost = self.graph.dist_matrix[self.next + current * self.graph.num_valves];
                 if next_cost <= self.steps_left && (1 << self.next) & self.visited == 0 {
                     if !bound.better(&self, &self.graph, next_cost) {
                         self.next += 1;
@@ -164,7 +163,7 @@ impl<'a> BranchState<'a> {
     fn advance(&mut self, graph: &Graph, next_cost: u16) {
         self.visited |= 1 << self.next;
         self.steps_left -= next_cost;
-        self.score += graph.valves[self.next as usize] * self.steps_left;
+        self.score += graph.valves[self.next] * self.steps_left;
         self.stack.push(self.next);
         self.next = 0;
     }
@@ -174,8 +173,7 @@ impl<'a> BranchState<'a> {
         let prev = self.stack.pop().unwrap();
         self.score -= graph.valves[prev as usize] * self.steps_left;
         let prev_current = *self.stack.last().unwrap();
-        self.steps_left +=
-            graph.dist_matrix[prev as usize + prev_current as usize * graph.num_valves];
+        self.steps_left += graph.dist_matrix[prev + prev_current * graph.num_valves];
         self.visited ^= 1 << prev;
         self.next = prev + 1;
     }
@@ -204,14 +202,14 @@ impl Bound for BestBound {
 
     #[inline(always)]
     fn better(&self, b: &BranchState, g: &Graph, next_cost: u16) -> bool {
-        let mut bound = b.score + g.valves[b.next as usize] * (b.steps_left - next_cost);
+        let mut bound = b.score + g.valves[b.next] * (b.steps_left - next_cost);
         let mut steps_left_hypo = b.steps_left - next_cost;
-        for valve in 0..g.num_valves as u16 {
+        for valve in 0..g.num_valves {
             if (1 << valve) & b.visited != 0 || valve == b.next || steps_left_hypo < g.best_dist {
                 continue;
             }
             steps_left_hypo -= g.best_dist;
-            bound += g.valves[valve as usize] * steps_left_hypo;
+            bound += g.valves[valve] * steps_left_hypo;
         }
         bound > self.best
     }

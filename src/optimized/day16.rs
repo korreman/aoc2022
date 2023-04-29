@@ -8,11 +8,21 @@ pub fn run(input: &str) -> (u16, u16) {
     let valves = parse(input);
     let graph = preprocess(valves);
 
-    let bound1 = BranchState::new(&graph, 30).branch_and_bound::<BestBound>();
-    let res1 = bound1.best();
+    // Part 1
+    let mut bound = BestBound::new();
+    BranchState::new(&graph, 30, 0).branch_and_bound(&mut bound);
+    let res1 = bound.best();
 
-    let bound2 = BranchState::new(&graph, 26).branch_and_bound::<ComplementBound>();
-    let res2 = bound2.best();
+    // Part 2
+    let mut bound1 = BestBound::new();
+    BranchState::new(&graph, 26, 0).branch_and_bound(&mut bound1);
+
+    let mut bound2 = BestBound::new();
+    BranchState::new(&graph, 26, bound1.best_visited).branch_and_bound(&mut bound2);
+
+    let mut complement_bound = ComplementBound::new(bound2.best, graph.num_valves);
+    BranchState::new(&graph, 26, 0).branch_and_bound(&mut complement_bound);
+    let res2 = complement_bound.best();
 
     (res1, res2)
 }
@@ -123,10 +133,10 @@ struct BranchState<'a> {
 }
 
 impl<'a> BranchState<'a> {
-    fn new(graph: &'a Graph, steps_left: u16) -> Self {
+    fn new(graph: &'a Graph, steps_left: u16, previsited: u16) -> Self {
         Self {
             graph,
-            visited: 0,
+            visited: previsited,
             stack: vec![graph.valves.len() - 1],
             next: 0,
             score: 0,
@@ -135,8 +145,7 @@ impl<'a> BranchState<'a> {
     }
 
     #[inline(always)]
-    fn branch_and_bound<B: Bound>(&mut self) -> B {
-        let mut bound = B::new(self.graph.num_valves as u32);
+    fn branch_and_bound<B: Bound>(&mut self, bound: &mut B) {
         loop {
             if self.next < self.graph.num_valves - 1 {
                 let current = *self.stack.last().unwrap();
@@ -157,7 +166,6 @@ impl<'a> BranchState<'a> {
                 break;
             }
         }
-        bound
     }
 
     #[inline(always)]
@@ -181,7 +189,6 @@ impl<'a> BranchState<'a> {
 }
 
 trait Bound {
-    fn new(num_valves: u32) -> Self;
     fn update(&mut self, b: &BranchState);
     fn better(&self, b: &BranchState, g: &Graph, next_cost: u16) -> bool;
     fn best(&self) -> u16;
@@ -189,17 +196,22 @@ trait Bound {
 
 struct BestBound {
     best: u16,
+    best_visited: u16,
+}
+
+impl BestBound {
+    fn new() -> Self {
+        Self { best: 0, best_visited: 0 }
+    }
 }
 
 impl Bound for BestBound {
     #[inline(always)]
-    fn new(_: u32) -> Self {
-        Self { best: 0 }
-    }
-
-    #[inline(always)]
     fn update(&mut self, b: &BranchState) {
-        self.best = self.best.max(b.score);
+        if self.best < b.score {
+            self.best = b.score;
+            self.best_visited = b.visited;
+        }
     }
 
     #[inline(always)]
@@ -224,14 +236,19 @@ impl Bound for BestBound {
 
 struct ComplementBound {
     bests: Vec<u16>,
+    best_complement: u16,
+}
+
+impl ComplementBound {
+    fn new(best_complement: u16, num_valves: usize) -> Self {
+        Self {
+            bests: vec![0; usize::pow(2, num_valves as u32 - 1)],
+            best_complement,
+        }
+    }
 }
 
 impl Bound for ComplementBound {
-    #[inline(always)]
-    fn new(num_valves: u32) -> Self {
-        Self { bests: vec![0; usize::pow(2, num_valves - 1)] }
-    }
-
     #[inline(always)]
     fn update(&mut self, b: &BranchState) {
         let visited = b.visited as usize;
@@ -240,7 +257,16 @@ impl Bound for ComplementBound {
 
     #[inline(always)]
     fn better(&self, b: &BranchState, g: &Graph, next_cost: u16) -> bool {
-        true
+        let mut bound = b.score + g.valves[b.next] * (b.steps_left - next_cost);
+        let mut steps_left_hypo = b.steps_left - next_cost;
+        for valve in 0..g.num_valves {
+            if (1 << valve) & b.visited != 0 || valve == b.next || steps_left_hypo < g.best_dist {
+                continue;
+            }
+            steps_left_hypo -= g.best_dist;
+            bound += g.valves[valve] * steps_left_hypo;
+        }
+        bound > self.best_complement
     }
 
     #[inline(always)]

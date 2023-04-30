@@ -52,6 +52,7 @@ impl Blueprint {
     }
 }
 
+#[derive(Clone)]
 struct Res {
     oreo: u8,
     clay: u8,
@@ -76,6 +77,7 @@ struct State<'a> {
     best: u16,
     robots: Res,
     res: Res,
+    oreo_max: u8,
 }
 
 impl<'a> Display for State<'a> {
@@ -89,6 +91,16 @@ impl<'a> Display for State<'a> {
 
 impl<'a> State<'a> {
     fn new(blueprint: &'a Blueprint, steps: u8) -> Self {
+        let oreo_max = *[
+            blueprint.oreo,
+            blueprint.clay,
+            blueprint.obsi,
+            blueprint.geod,
+        ]
+        .iter()
+        .max()
+        .unwrap();
+
         Self {
             blueprint,
             stack: vec![],
@@ -104,6 +116,7 @@ impl<'a> State<'a> {
                 obsi: 0,
             },
             res: Res { oreo: 0, clay: 0, obsi: 0 },
+            oreo_max,
         }
     }
 
@@ -129,18 +142,47 @@ impl<'a> State<'a> {
 
     #[inline(always)]
     fn upper_bound(&self) -> u16 {
-        // the current projection of total geodes,
-        // plus the projection if we buy a geode robot in every remaining step
-        let s = self.steps_left as u16;
-        self.score + (s * (s + 1)) / 2
+        let mut res = self.res.clone();
+        let mut rob = self.robots.clone();
+        let mut score = self.score;
+        for s in (0..self.steps_left).rev() {
+            if res.obsi >= self.blueprint.geod_obsi {
+                res.obsi -= self.blueprint.geod_obsi;
+                score += s as u16;
+            }
+            if res.clay >= self.blueprint.obsi_clay {
+                res.clay -= self.blueprint.obsi_clay;
+                rob.obsi += 1;
+            }
+            rob.clay += 1;
+            res.clay += rob.clay;
+            res.obsi += rob.obsi;
+        }
+        score
+
+        //let mut s = self.steps_left.saturating_sub(1) as u16;
+        //if self.res.oreo < self.blueprint.geod || self.res.obsi < self.blueprint.geod_obsi {
+        //    s = s.saturating_sub(1);
+        //}
+        //self.score + (s * (s + 1)) / 2
     }
 
     #[inline(always)]
     fn advance(&mut self) -> Option<()> {
         let req = |cost: u8, res: u8, robots: u8| {
-            (cost.saturating_sub(res) + robots - 1).checked_div(robots).map(|x| x + 1)
+            (cost.saturating_sub(res) + robots - 1)
+                .checked_div(robots)
+                .map(|x| x + 1)
         };
         let prev_steps_left = self.steps_left;
+        if match self.next {
+            3 => self.robots.oreo >= self.oreo_max,
+            2 => self.robots.clay >= self.blueprint.obsi_clay,
+            1 => self.robots.obsi >= self.blueprint.geod_obsi,
+            _ => false,
+        } {
+            return None;
+        }
         match self.next {
             // ore robot
             3 => {

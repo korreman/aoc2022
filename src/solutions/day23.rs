@@ -130,6 +130,7 @@ pub fn run(input: &str) -> (u64, u64) {
             break;
         }
     }
+    //println!("{grid}");
     (res1 as u64, round)
 }
 

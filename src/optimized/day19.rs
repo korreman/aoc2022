@@ -145,26 +145,23 @@ impl<'a> State<'a> {
         let mut res = self.res.clone();
         let mut rob = self.robots.clone();
         let mut score = self.score;
-        for s in (0..self.steps_left).rev() {
+        for s in (2..=self.steps_left).rev() {
+            let old_clay = rob.clay;
+            let old_obsi = rob.obsi;
+
             if res.obsi >= self.blueprint.geod_obsi {
                 res.obsi -= self.blueprint.geod_obsi;
-                score += s as u16;
+                score += s as u16 - 1;
             }
             if res.clay >= self.blueprint.obsi_clay {
                 res.clay -= self.blueprint.obsi_clay;
                 rob.obsi += 1;
             }
             rob.clay += 1;
-            res.clay += rob.clay;
-            res.obsi += rob.obsi;
+            res.clay += old_clay;
+            res.obsi += old_obsi;
         }
         score
-
-        //let mut s = self.steps_left.saturating_sub(1) as u16;
-        //if self.res.oreo < self.blueprint.geod || self.res.obsi < self.blueprint.geod_obsi {
-        //    s = s.saturating_sub(1);
-        //}
-        //self.score + (s * (s + 1)) / 2
     }
 
     #[inline(always)]
@@ -259,13 +256,7 @@ impl<'a> State<'a> {
     }
 
     fn run(&mut self) {
-        //let mut s = String::new();
-        //let mut i = 0;
         loop {
-            //i += 1;
-            //if i % 10_000 == 0 {
-            //    println!("{}", self.best);
-            //}
             if self.next < 4 {
                 if self.advance().is_some() {
                     self.best = self.best.max(self.score);

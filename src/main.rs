@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 use comfy_table::{presets::UTF8_FULL_CONDENSED, Cell, CellAlignment, Table};
 
 pub mod util;
+#[allow(dead_code)]
 mod solutions;
 mod optimized;
 
@@ -31,7 +32,7 @@ fn main() {
     state.run_day(20, &solutions::day20::run, "input/day20.txt");
     state.run_day(21, &solutions::day21::run, "input/day21.txt");
     state.run_day(22, &solutions::day22::run, "input/day22.txt");
-    state.run_day(23, &solutions::day23::run, "input/day23.txt");
+    state.run_day(23, &optimized::day23::run, "input/day23.txt");
     state.run_day(24, &optimized::day24::run, "input/day24.txt");
     state.run_day(25, &solutions::day25::run, "input/day25.txt");
 

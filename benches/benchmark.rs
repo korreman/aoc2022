@@ -44,7 +44,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         (solutions, day10),
         (optimized, day11),
         (solutions, day12),
-        (solutions, day13),
+        (optimized, day13),
         (optimized, day14),
         (optimized, day15),
         (optimized, day16),

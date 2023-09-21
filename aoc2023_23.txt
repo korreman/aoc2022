@@ -1,0 +1,39 @@
+Let X be the pre-step state.
+
+Compute horizontal and vertical convolutions (4):
+
+    let H = X← | X | X→;
+    let V = X↑ | X | X↓;
+
+Compute active elves (5):
+
+    let A = X & (H↑ | H↓ | V← | V→);
+
+Compute proposals (7):
+
+    let U = A↑ & ¬H;
+    let R = (¬U↓ & A)→ & ¬V;
+    let D = (¬R← & A)↓ & ¬H
+    let L = (¬U↑ & A)← & ¬V;
+
+Resolve conflicts (7):
+
+    let M = (U ^ D) | (R ^ L);
+    let Vk = U & D;
+    let Hk = R & L;
+
+Put together (6):
+
+    let O = (X & ¬A);
+    let S = Hk← | Hk→ | Vk↑ | Vk↓;
+    let Result = O | S | M;
+
+Total combining operations per step: 29
+Way above the 21 I assumed...
+
+---------------
+
+Another thing to consider:
+Only performing operations on the parts of the grid that have been reached.
+This would only really apply to rows if using SIMD.
+Each row could be 256 bits wide though, so maybe the point is moot.

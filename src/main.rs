@@ -22,7 +22,7 @@ fn main() {
     let (_, day10part2) = state.run_day(10, &solutions::day10::run, "input/day10.txt");
     state.run_day(11, &optimized::day11::run, "input/day11.txt");
     state.run_day(12, &solutions::day12::run, "input/day12.txt");
-    state.run_day(13, &solutions::day13::run, "input/day13.txt");
+    state.run_day(13, &optimized::day13::run, "input/day13.txt");
     state.run_day(14, &optimized::day14::run, "input/day14.txt");
     state.run_day(15, &optimized::day15::run, "input/day15.txt");
     state.run_day(16, &optimized::day16::run, "input/day16.txt");

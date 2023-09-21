@@ -1,28 +1,38 @@
+use itertools::Itertools;
+
 pub fn run(input: &str) -> (usize, u32) {
-    let mut res1 = 0;
-    let mut pos_a = 0;
-    let mut pos_b = 1;
-    for (idx, pair) in input.split_terminator("\n\n").enumerate() {
-        let (left, right) = pair.split_once('\n').unwrap();
-        let (left, right) = (left.as_bytes(), right.as_bytes());
+    let mut num_ordered = 0;
+
+    let mut pos_a = 1;
+    let mut pos_b = 2;
+    let a = b"[[2]]";
+    let b = b"[[6]]";
+
+    for (idx, (left, right)) in input
+        .lines()
+        .filter(|line| !line.is_empty())
+        .map(|line| line.as_bytes())
+        .tuples()
+        .enumerate()
+    {
         if ordered(left, right) {
-            res1 += 1 + idx;
+            num_ordered += 1 + idx;
         }
-        if ordered(right, b"[[2]]") {
+        if ordered(right, a) {
             pos_a += 1;
             pos_b += 1;
-        } else if ordered(right, b"[[6]]") {
+        } else if ordered(right, b) {
             pos_b += 1;
         }
-        if ordered(left, b"[[2]]") {
+        if ordered(left, a) {
             pos_a += 1;
             pos_b += 1;
-        } else if ordered(left, b"[[6]]") {
+        } else if ordered(left, b) {
             pos_b += 1;
         }
     }
-    let res2 = (pos_a + 1) * (pos_b + 1);
-    (res1, res2)
+
+    (num_ordered, pos_a * pos_b)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

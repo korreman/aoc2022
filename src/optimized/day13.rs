@@ -8,16 +8,16 @@ pub fn run(input: &str) -> (usize, u32) {
         if ordered(left, right) {
             res1 += 1 + idx;
         }
-        if ordered(left, b"[[2]]") {
-            pos_a += 1;
-        }
         if ordered(right, b"[[2]]") {
             pos_a += 1;
-        }
-        if ordered(left, b"[[6]]") {
+            pos_b += 1;
+        } else if ordered(right, b"[[6]]") {
             pos_b += 1;
         }
-        if ordered(right, b"[[6]]") {
+        if ordered(left, b"[[2]]") {
+            pos_a += 1;
+            pos_b += 1;
+        } else if ordered(left, b"[[6]]") {
             pos_b += 1;
         }
     }
@@ -30,7 +30,7 @@ enum Token {
     Open,
     Num(u8),
     Close,
-    Eof,
+    End,
 }
 
 struct Stream<'a> {
@@ -41,15 +41,17 @@ struct Stream<'a> {
 
 impl<'a> Stream<'a> {
     fn new(stream: &'a [u8]) -> Self {
-        let mut res = Self { head: Token::Eof, pending_closes: 0, tail: stream };
+        let mut res = Self { head: Token::End, pending_closes: 0, tail: stream };
         res.step();
         res
     }
 
+    #[inline(always)]
     fn nest(&mut self) {
         self.pending_closes += 1;
     }
 
+    #[inline(always)]
     fn step(&mut self) {
         if self.pending_closes > 0 {
             self.pending_closes -= 1;
@@ -57,13 +59,13 @@ impl<'a> Stream<'a> {
             return;
         }
         if self.tail.is_empty() {
-            self.head = Token::Eof;
+            self.head = Token::End;
             return;
         }
         while self.tail[0] == b',' {
             self.tail = &self.tail[1..];
         }
-        if self.tail.get(0..2) == Some(&[b'1', b'0']) {
+        if self.tail.get(0..2) == Some(b"10") {
             self.tail = &self.tail[2..];
             self.head = Token::Num(b'9' + 1);
             return;
@@ -71,8 +73,7 @@ impl<'a> Stream<'a> {
         self.head = match self.tail[0] {
             b'[' => Token::Open,
             b']' => Token::Close,
-            c if c.is_ascii_digit() => Token::Num(c),
-            _ => panic!("unrecognized character: {}", self.tail[0]),
+            c => Token::Num(c),
         };
         self.tail = &self.tail[1..];
     }
@@ -83,12 +84,12 @@ fn ordered(lhs: &[u8], rhs: &[u8]) -> bool {
     let mut r = Stream::new(rhs);
     loop {
         match (l.head, r.head) {
-            (Token::Eof, Token::Eof) => return true,
+            (Token::End, Token::End) => return true,
             (x, y) if x == y => {
                 l.step();
                 r.step();
             }
-            (Token::Num(x), Token::Num(y)) => return x <= y,
+            (Token::Num(x), Token::Num(y)) => return x < y,
             (Token::Open, Token::Num(_)) => {
                 l.step();
                 r.nest();
@@ -99,7 +100,7 @@ fn ordered(lhs: &[u8], rhs: &[u8]) -> bool {
             }
             (Token::Close, _) => return true,
             (_, Token::Close) => return false,
-            _ => panic!("unexpected token pair"),
+            _ => (),
         }
     }
 }

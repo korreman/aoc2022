@@ -5,7 +5,7 @@ Compute horizontal and vertical convolutions (4):
     let H = X← | X | X→;
     let V = X↑ | X | X↓;
 
-Compute active elves (5):
+Compute active elves (4):
 
     let A = X & (H↑ | H↓ | V← | V→);
 
@@ -16,7 +16,7 @@ Compute proposals (7):
     let D = (¬R← & A)↓ & ¬H
     let L = (¬U↑ & A)← & ¬V;
 
-Resolve conflicts (7):
+Resolve conflicts (5):
 
     let M = (U ^ D) | (R ^ L);
     let Vk = U & D;
@@ -28,8 +28,8 @@ Put together (6):
     let S = Hk← | Hk→ | Vk↑ | Vk↓;
     let Result = O | S | M;
 
-Total combining operations per step: 29
-Way above the 21 I assumed...
+Total combining operations per step: 26
+Above the 21 I assumed...
 
 ---------------
 

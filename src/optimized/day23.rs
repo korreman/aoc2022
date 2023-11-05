@@ -158,16 +158,16 @@ struct Row([u64; 3]);
 
 impl Row {
     fn left(mut self) -> Self {
-        for i in 0..3 {
-            self.0[i] = (self.0[i] << 1) | self.0.get(i + 1).unwrap_or(&0) >> 63;
-        }
+        self.0[2] = self.0[2] << 1 | self.0[1] >> 63;
+        self.0[1] = self.0[1] << 1 | self.0[0] >> 63;
+        self.0[0] = self.0[1] << 1;
         self
     }
 
     fn right(mut self) -> Self {
-        for i in 0..3 {
-            self.0[i] = (self.0[i] >> 1) | self.0.get(i.wrapping_sub(1)).unwrap_or(&0) >> 63;
-        }
+        self.0[0] = self.0[0] >> 1 | self.0[1] << 63;
+        self.0[1] = self.0[1] >> 1 | self.0[2] << 63;
+        self.0[2] = self.0[2] >> 1;
         self
     }
 }

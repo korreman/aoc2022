@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Display, Write};
+use std::fmt::{Display, Write};
 
 pub fn run(input: &str) -> (i32, Res2) {
     let input = input.as_bytes();
@@ -68,15 +68,8 @@ impl Res2 {
 
 impl Display for Res2 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("see below")
-    }
-}
-
-impl Debug for Res2 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("Day 10, part 2:\n")?;
-        for y in 0..6 as u16 {
-            for x in 0..40 as u16 {
+        for y in 0..6 {
+            for x in 0..40 {
                 let idx = x + y * 40;
                 let bit =
                     self.data[(idx >> Self::BITSHIFT) as usize] & (1 << (idx & Self::MASK)) != 0;

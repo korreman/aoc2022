@@ -294,7 +294,7 @@ impl Bound for StaticBound {
             steps_left_hypo -= g.best_dist;
             bound += g.valves[valve] * steps_left_hypo;
         }
-        bound > self.lower_bound
+        bound >= self.lower_bound
     }
 
     #[inline(always)]

@@ -1,4 +1,6 @@
 use std::fmt::Display;
+use std::fs::read_to_string;
+use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use comfy_table::{presets::UTF8_FULL_CONDENSED, Cell, CellAlignment, Table};
@@ -9,8 +11,14 @@ mod solutions;
 pub mod util;
 
 fn main() {
-    for subfolder in ["a", "b"] {
-        let mut state = State::new(subfolder);
+    let dir = std::fs::read_dir("data").expect("no data directory");
+    let mut profiles: Vec<_> = dir.map(|x| x.unwrap()).collect();
+    profiles.sort_by_key(|profile| profile.path());
+    for entry in profiles {
+        let mut path = entry.path();
+        println!("Profile {}", path.file_name().unwrap().to_str().unwrap());
+        path.push("inputs");
+        let mut state = State::new(path);
         state.run_day(01, &optimized::day01::run);
         state.run_day(02, &solutions::day02::run);
         state.run_day(03, &solutions::day03::run);
@@ -40,19 +48,19 @@ fn main() {
     }
 }
 
-struct State<'a> {
-    subfolder: &'a str,
+struct State {
+    input_folder: PathBuf,
     table: Table,
     total: Duration,
     large_answers: Vec<String>,
 }
 
-impl<'a> State<'a> {
-    fn new(subfolder: &'a str) -> Self {
+impl State {
+    fn new(input_folder: PathBuf) -> Self {
         let mut table = Table::new();
         table.load_preset(UTF8_FULL_CONDENSED);
         table.set_header(vec!["Day", "Part 1", "Part 2", "Time"]);
-        Self { subfolder, table, total: Duration::ZERO, large_answers: Vec::new() }
+        Self { input_folder, table, total: Duration::ZERO, large_answers: Vec::new() }
     }
 
     fn run_day<A1: Display, A2: Display>(
@@ -60,10 +68,11 @@ impl<'a> State<'a> {
         day: usize,
         task: &dyn Fn(&str) -> (A1, A2),
     ) -> (A1, A2) {
+        let mut path = self.input_folder.clone();
+        path.push(format!("day{day:02}.txt"));
         // Read input
-        let input_path = format!("data/{}/inputs/day{day:02}.txt", self.subfolder);
-        let input = std::fs::read_to_string(&input_path)
-            .expect(format!("missing input: {input_path}").as_str());
+        let input = read_to_string(path)
+            .expect(format!("missing input: {}", self.input_folder.display()).as_str());
 
         // Run solution
         let start = Instant::now();

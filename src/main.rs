@@ -16,7 +16,7 @@ fn main() {
     profiles.sort_by_key(|profile| profile.path());
     for entry in profiles {
         let mut path = entry.path();
-        println!("Profile {}", path.file_name().unwrap().to_str().unwrap());
+        println!("Profile: {}", path.file_name().unwrap().to_str().unwrap());
         path.push("inputs");
         let mut state = State::new(path);
         state.run_day(01, &optimized::day01::run);

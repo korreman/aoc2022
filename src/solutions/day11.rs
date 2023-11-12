@@ -58,7 +58,7 @@ struct Monkey {
 pub fn run(input: &str) -> (usize, usize) {
     let make_monkey = |p: &str| {
         let mut lines = p.lines();
-        drop(lines.next());
+        lines.next();
         let items = lines.next()?[18..]
             .split(", ")
             .map(|n| n.parse::<u64>().unwrap())

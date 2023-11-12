@@ -1,9 +1,9 @@
 use std::{
     fmt::{Display, Write},
-    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, ShlAssign},
+    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not},
 };
 
-pub fn run(input: &str) -> (u32, u32) {
+pub fn run(_input: &str) -> (u32, u32) {
     let mut grid = Grid([Row([0; 3]); 160]);
     for _ in 0..1116 {
         grid.step();

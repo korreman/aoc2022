@@ -1,7 +1,4 @@
-use std::{
-    fmt::Write,
-    ops::{BitAndAssign, BitOrAssign, Shl, Shr},
-};
+use std::{fmt::Write, mem::swap, ops::BitAndAssign};
 
 use itertools::izip;
 
@@ -63,10 +60,10 @@ impl State {
             if line.starts_with("##") || line.starts_with("#.#") {
                 continue;
             }
-            let mut u = 0u128;
-            let mut d = 0u128;
-            let mut l = 0u128;
-            let mut r = 0u128;
+            let mut u = 0;
+            let mut d = 0;
+            let mut l = 0;
+            let mut r = 0;
             for c in line.chars() {
                 if c == '#' {
                     continue;
@@ -84,18 +81,18 @@ impl State {
                     _ => panic!(),
                 }
             }
-            positions.rows.push(Row(0));
-            blizzard_u.rows.push(Row(!u));
-            blizzard_d.rows.push(Row(!d));
-            blizzard_l.rows.push(Row(!l));
-            blizzard_r.rows.push(Row(!r));
+            positions.rows.push(0);
+            blizzard_u.rows.push(!u);
+            blizzard_d.rows.push(!d);
+            blizzard_l.rows.push(!l);
+            blizzard_r.rows.push(!r);
         }
         Self { width, positions, blizzard_u, blizzard_d, blizzard_l, blizzard_r }
     }
 
     fn clear_positions(&mut self) {
         for row in &mut self.positions.rows {
-            row.0 = 0;
+            *row = 0;
         }
     }
 
@@ -104,7 +101,7 @@ impl State {
         self.positions.propagate(self.width);
         // Add entry move as well.
         // Corresponds to the upper left corner.
-        self.positions.rows.first_mut().unwrap().0 |= 1 << (self.width - 1);
+        *self.positions.rows.first_mut().unwrap() |= 1 << (self.width - 1);
         // Move blizzards.
         self.blizzard_u.rotu();
         self.blizzard_d.rotd();
@@ -116,7 +113,7 @@ impl State {
         self.positions &= &self.blizzard_l;
         self.positions &= &self.blizzard_r;
         // Indicate whether the target cell has been reached.
-        self.positions.rows.last().unwrap().0.trailing_zeros() == 0
+        self.positions.rows.last().unwrap().trailing_zeros() == 0
     }
 
     fn step_back(&mut self) -> bool {
@@ -124,7 +121,7 @@ impl State {
         self.positions.propagate(self.width);
         // Add entry move as well.
         // Corresponds to the upper left corner.
-        self.positions.rows.last_mut().unwrap().0 |= 1;
+        *self.positions.rows.last_mut().unwrap() |= 1;
         // Move blizzards.
         self.blizzard_u.rotu();
         self.blizzard_d.rotd();
@@ -136,12 +133,12 @@ impl State {
         self.positions &= &self.blizzard_l;
         self.positions &= &self.blizzard_r;
         // Indicate whether the target cell has been reached.
-        self.positions.rows.first().unwrap().0.leading_zeros() == 128 - self.width as u32
+        self.positions.rows.first().unwrap().leading_zeros() == 128 - self.width as u32
     }
 }
 
 struct Board {
-    rows: Vec<Row>,
+    rows: Vec<u128>,
 }
 
 impl Board {
@@ -150,24 +147,24 @@ impl Board {
         for row in &mut new_rows {
             *row |= *row << 1;
             *row |= *row >> 1;
-            row.mask(width);
+            *row = mask(*row, width);
         }
         for i in 0..self.rows.len() - 1 {
             new_rows[i] |= self.rows[i + 1];
             new_rows[i + 1] |= self.rows[i];
         }
-        std::mem::swap(&mut self.rows, &mut new_rows);
+        swap(&mut self.rows, &mut new_rows);
     }
 
     fn rotl(&mut self, width: usize) {
         for row in &mut self.rows {
-            row.rotl_assign(width);
+            *row = rotl_assign(*row, width);
         }
     }
 
     fn rotr(&mut self, width: usize) {
         for row in &mut self.rows {
-            row.rotr_assign(width);
+            *row = rotr_assign(*row, width);
         }
     }
 
@@ -190,54 +187,23 @@ impl BitAndAssign<&Board> for Board {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-struct Row(u128);
-
-impl BitAndAssign for Row {
-    fn bitand_assign(&mut self, rhs: Self) {
-        self.0 &= rhs.0;
-    }
+fn mask(x: u128, width: usize) -> u128 {
+    x & ((1 << width) - 1)
 }
 
-impl BitOrAssign for Row {
-    fn bitor_assign(&mut self, rhs: Self) {
-        self.0 |= rhs.0;
-    }
+fn rotl_assign(mut x: u128, width: usize) -> u128 {
+    x = !x;
+    x = (x << 1) | (x >> (width - 1));
+    x = !x;
+    x |= !((1 << width) - 1);
+    x
 }
 
-impl Shl<usize> for Row {
-    type Output = Row;
-
-    fn shl(self, rhs: usize) -> Self::Output {
-        Self(self.0 << rhs)
-    }
-}
-
-impl Shr<usize> for Row {
-    type Output = Row;
-
-    fn shr(self, rhs: usize) -> Self::Output {
-        Self(self.0 >> rhs)
-    }
-}
-
-impl Row {
-    fn mask(&mut self, width: usize) {
-        self.0 &= (1 << width) - 1;
-    }
-
-    fn rotl_assign(&mut self, width: usize) {
-        self.0 = !self.0;
-        self.0 = (self.0 << 1) | (self.0 >> (width - 1));
-        self.0 = !self.0;
-        self.0 |= !((1 << width) - 1);
-    }
-
-    fn rotr_assign(&mut self, width: usize) {
-        self.0 = !self.0;
-        self.0 = (self.0 >> 1) | (self.0 << (width - 1));
-        self.0 = !self.0;
-    }
+fn rotr_assign(mut x: u128, width: usize) -> u128 {
+    x = !x;
+    x = (x >> 1) | (x << (width - 1));
+    x = !x;
+    x
 }
 
 impl std::fmt::Display for State {
@@ -250,11 +216,11 @@ impl std::fmt::Display for State {
             &self.blizzard_l.rows,
             &self.blizzard_r.rows,
         ) {
-            let mut p = row_p.0;
-            let mut u = row_u.0;
-            let mut d = row_d.0;
-            let mut l = row_l.0;
-            let mut r = row_r.0;
+            let mut p = *row_p;
+            let mut u = *row_u;
+            let mut d = *row_d;
+            let mut l = *row_l;
+            let mut r = *row_r;
             let m = 1 << (self.width - 1);
             f.write_char('▕')?;
             for _ in 0..self.width {

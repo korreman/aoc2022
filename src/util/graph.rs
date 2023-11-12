@@ -7,24 +7,24 @@ use std::ops::{Index, IndexMut, Range};
 /// Actual implementation of the graph class.
 pub trait GraphImpl<T>
 where
-    Self: Index<Self::Handle, Output = T> + IndexMut<Self::Handle, Output = T>,
+    Self: Index<Self::Node, Output = T> + IndexMut<Self::Node, Output = T>,
 {
     /// A reference to a node in a graph.
     /// This should index the equivalent node between mapped graphs.
-    type Handle: Copy;
+    type Node: Copy;
 
-    /// Get the neighbors for `handle` in the graph.
-    fn neighbors(&self, handle: Self::Handle) -> Self::Neighbors;
-    type Neighbors: Iterator<Item = Self::Handle>;
+    /// Get the neighbors for `node` in the graph.
+    fn neighbors(&self, node: Self::Node) -> Self::Neighbors;
+    type Neighbors: Iterator<Item = Self::Node>;
 
     /// Get handles to all of the nodes in the graph.
     /// No ordering is guaranteed.
-    fn handles(&self) -> Self::AllHandles;
-    type AllHandles: Iterator<Item = Self::Handle>;
+    fn nodes(&self) -> Self::AllNodes;
+    type AllNodes: Iterator<Item = Self::Node>;
 
     /// Mapping function, creates a new graph with the exact same structure.
     fn map<U, F: FnMut(&T) -> U>(&self, f: F) -> Self::Map<U>;
-    type Map<U>: GraphImpl<U, Handle = Self::Handle>;
+    type Map<U>: GraphImpl<U, Node = Self::Node>;
 }
 
 /// An index graph backed by a `Vec`.
@@ -79,17 +79,17 @@ impl<T> IndexMut<usize> for VecGraph<T> {
 
 impl<T> Graph<T> for VecGraph<T> {}
 impl<T> GraphImpl<T> for VecGraph<T> {
-    type Handle = usize;
+    type Node = usize;
 
-    fn neighbors(&self, handle: usize) -> Self::Neighbors {
-        self.data[handle].neighbors.clone().into_iter()
+    fn neighbors(&self, node: usize) -> Self::Neighbors {
+        self.data[node].neighbors.clone().into_iter()
     }
     type Neighbors = std::vec::IntoIter<usize>;
 
-    fn handles(&self) -> Self::AllHandles {
+    fn nodes(&self) -> Self::AllNodes {
         0..self.data.len()
     }
-    type AllHandles = Range<usize>;
+    type AllNodes = Range<usize>;
 
     fn map<U, F: FnMut(&T) -> U>(&self, mut f: F) -> Self::Map<U> {
         let data = self
@@ -199,17 +199,17 @@ impl<H, T> GraphImpl<T> for HashGraph<H, T>
 where
     H: Copy + PartialEq + Eq + std::hash::Hash,
 {
-    type Handle = H;
+    type Node = H;
 
-    fn neighbors(&self, handle: H) -> Self::Neighbors {
-        self.data[&handle].neighbors.clone().into_iter()
+    fn neighbors(&self, node: H) -> Self::Neighbors {
+        self.data[&node].neighbors.clone().into_iter()
     }
     type Neighbors = std::vec::IntoIter<H>;
 
-    fn handles(&self) -> Self::AllHandles {
+    fn nodes(&self) -> Self::AllNodes {
         self.data.keys().cloned().collect::<Vec<H>>().into_iter()
     }
-    type AllHandles = std::vec::IntoIter<H>;
+    type AllNodes = std::vec::IntoIter<H>;
 
     fn map<U, F: FnMut(&T) -> U>(&self, mut f: F) -> Self::Map<U> {
         let data = self

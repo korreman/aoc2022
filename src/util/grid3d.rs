@@ -109,12 +109,12 @@ impl<T> Grid<T> {
 
 impl<T> Graph<T> for Grid<T> {}
 impl<T> GraphImpl<T> for Grid<T> {
-    type Handle = Pos;
+    type Node = Pos;
 
     type Neighbors = Neighbors;
-    fn neighbors(&self, handle: Pos) -> Self::Neighbors {
+    fn neighbors(&self, node: Pos) -> Self::Neighbors {
         Neighbors {
-            center: handle,
+            center: node,
             width: self.width,
             height: self.height,
             depth: self.depth,
@@ -122,7 +122,7 @@ impl<T> GraphImpl<T> for Grid<T> {
         }
     }
 
-    fn handles(&self) -> Self::AllHandles {
+    fn nodes(&self) -> Self::AllNodes {
         let mut res = Vec::new();
         for z in 0..self.depth {
             for y in 0..self.height {
@@ -133,7 +133,7 @@ impl<T> GraphImpl<T> for Grid<T> {
         }
         res.into_iter()
     }
-    type AllHandles = std::vec::IntoIter<Pos>;
+    type AllNodes = std::vec::IntoIter<Pos>;
 
     type Map<U> = Grid<U>;
     fn map<U, F: FnMut(&T) -> U>(&self, mut f: F) -> Self::Map<U> {

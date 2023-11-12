@@ -53,10 +53,10 @@ impl<T> IndexMut<TimePos> for Blizzards<T> {
 
 impl<T> Graph<T> for Blizzards<T> {}
 impl<T> GraphImpl<T> for Blizzards<T> {
-    type Handle = TimePos;
+    type Node = TimePos;
 
     type Neighbors = std::vec::IntoIter<TimePos>;
-    fn neighbors(&self, handle: Self::Handle) -> Self::Neighbors {
+    fn neighbors(&self, handle: Self::Node) -> Self::Neighbors {
         let mut candidates = self
             .u
             .neighbors(pos(handle.pos.x, handle.pos.y))
@@ -80,8 +80,8 @@ impl<T> GraphImpl<T> for Blizzards<T> {
     }
 
     // NOTE: Not implemented
-    type AllHandles = std::vec::IntoIter<TimePos>;
-    fn handles(&self) -> Self::AllHandles {
+    type AllNodes = std::vec::IntoIter<TimePos>;
+    fn nodes(&self) -> Self::AllNodes {
         vec![].into_iter()
     }
 

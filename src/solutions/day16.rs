@@ -180,7 +180,7 @@ pub fn run(input: &str) -> (u64, u64) {
     let valves: VecGraph<u64> = valves.into();
 
     // Collect the valves that can release pressure
-    let mut relevant_valves = valves.handles().filter(|&h| valves[h] != 0).collect_vec();
+    let mut relevant_valves = valves.nodes().filter(|&h| valves[h] != 0).collect_vec();
     // Add the starting valve regardless of pressure release.
     if !relevant_valves.contains(&valves.start) {
         relevant_valves.push(valves.start);

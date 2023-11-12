@@ -20,7 +20,7 @@ pub fn run_helper(input: &str) -> (usize, usize) {
 
     // Part 2
     // Going back
-    state.clear_positions();
+    state.positions.clear();
     while !state.step_back() {
         minutes += 1;
     }
@@ -28,7 +28,7 @@ pub fn run_helper(input: &str) -> (usize, usize) {
     minutes += 2;
 
     // Going forward again
-    state.clear_positions();
+    state.positions.clear();
     while !state.step() {
         minutes += 1;
     }
@@ -56,14 +56,10 @@ impl State {
         let mut width = 0;
         for line in input.lines() {
             width = line.as_bytes().len() - 2;
-            assert!(width <= 128 || line.is_empty());
             if line.starts_with("##") || line.starts_with("#.#") {
                 continue;
             }
-            let mut u = 0;
-            let mut d = 0;
-            let mut l = 0;
-            let mut r = 0;
+            let (mut u, mut d, mut l, mut r) = (0, 0, 0, 0);
             for c in line.chars() {
                 if c == '#' {
                     continue;
@@ -88,12 +84,6 @@ impl State {
             blizzard_r.rows.push(!r);
         }
         Self { width, positions, blizzard_u, blizzard_d, blizzard_l, blizzard_r }
-    }
-
-    fn clear_positions(&mut self) {
-        for row in &mut self.positions.rows {
-            *row = 0;
-        }
     }
 
     fn run_blizzards(&mut self) {
@@ -148,6 +138,12 @@ impl Board {
             new_rows[i + 1] |= self.rows[i];
         }
         swap(&mut self.rows, &mut new_rows);
+    }
+
+    fn clear(&mut self) {
+        for row in &mut self.rows {
+            *row = 0;
+        }
     }
 
     fn rotl(&mut self, width: usize) {

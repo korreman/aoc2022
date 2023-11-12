@@ -96,43 +96,37 @@ impl State {
         }
     }
 
+    fn run_blizzards(&mut self) {
+        // Move blizzards.
+        self.blizzard_u.rotu();
+        self.blizzard_d.rotd();
+        self.blizzard_l.rotl(self.width);
+        self.blizzard_r.rotr(self.width);
+        // Remove possibilities from board.
+        self.positions &= &self.blizzard_u;
+        self.positions &= &self.blizzard_d;
+        self.positions &= &self.blizzard_l;
+        self.positions &= &self.blizzard_r;
+    }
+
     fn step(&mut self) -> bool {
         // Propagate movement options.
         self.positions.propagate(self.width);
         // Add entry move as well.
         // Corresponds to the upper left corner.
         *self.positions.rows.first_mut().unwrap() |= 1 << (self.width - 1);
-        // Move blizzards.
-        self.blizzard_u.rotu();
-        self.blizzard_d.rotd();
-        self.blizzard_l.rotl(self.width);
-        self.blizzard_r.rotr(self.width);
-        // Remove possibilities from board.
-        self.positions &= &self.blizzard_u;
-        self.positions &= &self.blizzard_d;
-        self.positions &= &self.blizzard_l;
-        self.positions &= &self.blizzard_r;
+        // Simulate blizzards
+        self.run_blizzards();
+        // Advance the board state
         // Indicate whether the target cell has been reached.
         self.positions.rows.last().unwrap().trailing_zeros() == 0
     }
 
     fn step_back(&mut self) -> bool {
-        // Propagate movement options.
+        // Same as step, but start and goal are inverted.
         self.positions.propagate(self.width);
-        // Add entry move as well.
-        // Corresponds to the upper left corner.
         *self.positions.rows.last_mut().unwrap() |= 1;
-        // Move blizzards.
-        self.blizzard_u.rotu();
-        self.blizzard_d.rotd();
-        self.blizzard_l.rotl(self.width);
-        self.blizzard_r.rotr(self.width);
-        // Remove possibilities from board.
-        self.positions &= &self.blizzard_u;
-        self.positions &= &self.blizzard_d;
-        self.positions &= &self.blizzard_l;
-        self.positions &= &self.blizzard_r;
-        // Indicate whether the target cell has been reached.
+        self.run_blizzards();
         self.positions.rows.first().unwrap().leading_zeros() == 128 - self.width as u32
     }
 }
@@ -195,7 +189,6 @@ fn rotl_assign(mut x: u128, width: usize) -> u128 {
     x = !x;
     x = (x << 1) | (x >> (width - 1));
     x = !x;
-    x |= !((1 << width) - 1);
     x
 }
 

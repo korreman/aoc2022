@@ -44,7 +44,7 @@ pub fn bfs<T, G: Graph<T>>(
 
 pub fn dijkstra<T, G, Q>(
     graph: &G,
-    cost: impl Fn(G::Node, G::Node) -> Option<usize>,
+    get_edge: impl Fn(G::Node, G::Node) -> Option<usize>,
     mut is_target: impl FnMut(usize, G::Node) -> bool,
     start: G::Node,
 ) -> Option<usize>
@@ -57,19 +57,20 @@ where
 
     costs[start] = 0;
     queue.add(0, start);
-    while let Some((c, h)) = queue.next() {
-        if c != costs[h] {
+    while let Some((cost, node)) = queue.next() {
+        // Skip node if the cost from the queue is outdated.
+        if cost != costs[node] {
             continue;
         }
-        if is_target(c, h) {
-            return Some(c);
+        if is_target(cost, node) {
+            return Some(cost);
         }
-        for n in graph.neighbors(h) {
-            if let Some(move_cost) = cost(h, n) {
-                let nc = c + move_cost;
-                if nc < costs[n] {
-                    costs[n] = nc;
-                    queue.add(nc, n);
+        for neighbor in graph.neighbors(node) {
+            if let Some(move_cost) = get_edge(node, neighbor) {
+                let neighbor_cost = cost + move_cost;
+                if neighbor_cost < costs[neighbor] {
+                    costs[neighbor] = neighbor_cost;
+                    queue.add(neighbor_cost, neighbor);
                 }
             }
         }
@@ -85,7 +86,7 @@ where
 /// or the optimal path might be forgotten.
 pub fn a_star<T, G, Q>(
     graph: &G,
-    cost: impl Fn(G::Node, G::Node) -> Option<usize>,
+    get_edge: impl Fn(G::Node, G::Node) -> Option<usize>,
     heuristic: impl Fn(G::Node) -> usize,
     mut is_target: impl FnMut(usize, G::Node) -> bool,
     start: G::Node,
@@ -99,20 +100,20 @@ where
 
     costs[start] = 0;
     queue.add(heuristic(start), start);
-    while let Some((p, h)) = queue.next() {
-        let c = p - heuristic(h);
-        if c != costs[h] {
+    while let Some((priority, node)) = queue.next() {
+        let cost = priority - heuristic(node);
+        if cost != costs[node] {
             continue;
         }
-        if is_target(c, h) {
-            return Some(c);
+        if is_target(cost, node) {
+            return Some(cost);
         }
-        for n in graph.neighbors(h) {
-            if let Some(move_cost) = cost(h, n) {
-                let nc = c + move_cost;
-                if nc < costs[n] {
-                    costs[n] = nc;
-                    queue.add(nc + heuristic(n), n);
+        for neighbor in graph.neighbors(node) {
+            if let Some(move_cost) = get_edge(node, neighbor) {
+                let neighbor_cost = cost + move_cost;
+                if neighbor_cost < costs[neighbor] {
+                    costs[neighbor] = neighbor_cost;
+                    queue.add(neighbor_cost + heuristic(neighbor), neighbor);
                 }
             }
         }

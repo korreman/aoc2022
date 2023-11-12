@@ -4,7 +4,7 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 macro_rules! input {
     ($day:ident) => {
         let $day =
-            std::fs::read_to_string(concat!("data/a/inputs/", stringify!($day), ".txt")).unwrap();
+            std::fs::read_to_string(concat!("data/github/inputs/", stringify!($day), ".txt")).unwrap();
     };
 }
 

@@ -1,7 +1,4 @@
-use std::{
-    cmp::Reverse,
-    collections::{BinaryHeap, VecDeque},
-};
+use std::{cmp::Reverse, collections::BinaryHeap};
 
 pub trait Priority
 where
@@ -21,33 +18,24 @@ pub trait Queue<T> {
     fn new() -> Self;
     fn add(&mut self, priority: Self::Priority, item: T);
     fn next(&mut self) -> Option<(Self::Priority, T)>;
-    fn len(&self) -> usize;
-    fn is_empty(&self) -> bool;
 }
 
-// TODO:
-// - Could probably get rid of `count` field.
-// - Use a static ringbuffer instead of a VecDeque.
 pub struct SlidingBucketQueue<const R: usize, T> {
     offset: usize,
     count: usize,
-    pub queue: VecDeque<Vec<T>>,
+    pub queue: [Vec<T>; R],
 }
 
 impl<const R: usize, T: Clone> Queue<T> for SlidingBucketQueue<R, T> {
     type Priority = usize;
 
     fn new() -> Self {
-        Self {
-            offset: 0,
-            count: 0,
-            queue: VecDeque::from(vec![Vec::new(); R]),
-        }
+        Self { offset: 0, count: 0, queue: [(); R].map(|_| vec![]) }
     }
 
     fn add(&mut self, priority: usize, item: T) {
         if (self.offset..self.offset + R).contains(&priority) {
-            self.queue[priority - self.offset].push(item);
+            self.queue[(priority - self.offset) % R].push(item);
             self.count += 1;
         } else {
             panic!("priority {priority} outside current range");
@@ -66,14 +54,6 @@ impl<const R: usize, T: Clone> Queue<T> for SlidingBucketQueue<R, T> {
                 self.queue.rotate_left(1);
             }
         }
-    }
-
-    fn len(&self) -> usize {
-        self.count
-    }
-
-    fn is_empty(&self) -> bool {
-        self.count == 0
     }
 }
 
@@ -131,14 +111,6 @@ impl<T> Queue<T> for RadixHeap<T> {
         }
         Some(result)
     }
-
-    fn len(&self) -> usize {
-        self.buckets.iter().map(|bucket| bucket.len()).sum()
-    }
-
-    fn is_empty(&self) -> bool {
-        self.buckets.iter().all(|bucket| bucket.is_empty())
-    }
 }
 
 impl<P: Priority, T> Queue<T> for BinaryHeap<Reverse<KVPair<P, T>>> {
@@ -154,14 +126,6 @@ impl<P: Priority, T> Queue<T> for BinaryHeap<Reverse<KVPair<P, T>>> {
 
     fn next(&mut self) -> Option<(P, T)> {
         self.pop().map(|entry| KVPair::extract(entry.0))
-    }
-
-    fn len(&self) -> usize {
-        self.len()
-    }
-
-    fn is_empty(&self) -> bool {
-        self.is_empty()
     }
 }
 

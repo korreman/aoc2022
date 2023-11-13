@@ -48,6 +48,7 @@ impl<const R: usize, T: Clone> Queue<T> for SlidingBucketQueue<R, T> {
         }
         loop {
             if let Some(v) = self.queue[0].pop() {
+                self.count -= 1;
                 return Some((self.offset, v));
             } else {
                 self.offset += 1;

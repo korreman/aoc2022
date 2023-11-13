@@ -120,7 +120,6 @@ pub fn run(input: &str) -> (usize, usize) {
                 c => panic!("unrecognized character '{c}'"),
             };
         }
-        ()
     }));
     let blizzards: Blizzards<()> = Blizzards {
         width,

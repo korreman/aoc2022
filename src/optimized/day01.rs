@@ -8,18 +8,16 @@ pub fn run(input: &str) -> (u32, u32) {
         if *b != b'\n' {
             acc *= 10;
             acc += (b - b'0') as u32;
+        } else if acc > 0 {
+            calories += acc;
+            acc = 0;
         } else {
-            if acc > 0 {
-                calories += acc;
-                acc = 0;
-            } else {
-                for max in &mut maxes {
-                    if *max < calories {
-                        swap(max, &mut calories);
-                    }
+            for max in &mut maxes {
+                if *max < calories {
+                    swap(max, &mut calories);
                 }
-                calories = 0;
             }
+            calories = 0;
         }
     }
     (maxes[0], maxes[0] + maxes[1] + maxes[2])

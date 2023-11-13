@@ -86,7 +86,7 @@ impl BlockSeq {
             if blocks.last().unwrap().len() >= Self::N {
                 blocks.push(Vec::with_capacity(Self::N * 2));
             }
-            blocks.last_mut().unwrap().push(value.clone());
+            blocks.last_mut().unwrap().push(value);
             idxs.push(blocks.len() - 1);
         }
         let groups = (0..1 + blocks.len() / Self::GROUP)

@@ -184,7 +184,7 @@ impl Iterator for Neighbors {
         #[rustfmt::skip]
         let f = |x: &mut usize, length: usize, inc: bool| -> bool {
             if inc { if *x < length - 1 { *x += 1; true } else { false } }
-            else { if *x > 0 { *x -= 1; true } else { false } }
+            else if *x > 0 { *x -= 1; true } else { false }
         };
         let b = match self.state {
             0 => f(&mut pos.x, self.width, true),

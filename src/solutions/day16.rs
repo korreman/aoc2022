@@ -6,8 +6,8 @@ use crate::util::graph::{GraphImpl, HashGraph, VecGraph};
 use crate::util::grid::{pos, Grid};
 use crate::util::pathfinding::bfs;
 
-fn parse_valve<'a>(line: &str) -> Option<(&str, std::vec::IntoIter<&str>, u64)> {
-    let words = line.split([' ', '=', ',', ';']).filter(|word| *word != "");
+fn parse_valve(line: &str) -> Option<(&str, std::vec::IntoIter<&str>, u64)> {
+    let words = line.split([' ', '=', ',', ';']).filter(|word| !word.is_empty());
     let mut words = words.skip(1);
     let label = words.next()?;
     let mut words = words.skip(3);
@@ -61,7 +61,7 @@ impl<'a> Dfs for State1<'a> {
         self.score
     }
 
-    fn perform(&mut self, history: &Vec<usize>, action: &usize) -> Option<usize> {
+    fn perform(&mut self, history: &[usize], action: &usize) -> Option<usize> {
         let cost = self.cost(*action);
         if self.steps_left >= cost && !history.contains(action) {
             self.steps_left -= cost;
@@ -73,7 +73,7 @@ impl<'a> Dfs for State1<'a> {
         }
     }
 
-    fn backtrack(&mut self, history: &Vec<usize>, trace: usize) {
+    fn backtrack(&mut self, history: &[usize], trace: usize) {
         self.score -= self.score_increase();
         self.node = *history.last().unwrap_or(&self.start);
         self.steps_left += self.cost(trace);
@@ -145,7 +145,7 @@ impl<'a> Dfs for State2<'a> {
 
     fn perform(
         &mut self,
-        history: &Vec<Self::Trace>,
+        history: &[Self::Trace],
         action: &Self::Action,
     ) -> Option<Self::Trace> {
         let i = self.lowest_actor();
@@ -161,7 +161,7 @@ impl<'a> Dfs for State2<'a> {
         }
     }
 
-    fn backtrack(&mut self, _history: &Vec<Self::Trace>, trace: Self::Trace) {
+    fn backtrack(&mut self, _history: &[Self::Trace], trace: Self::Trace) {
         let i = if self.actors[0].node == trace.1 { 0 } else { 1 };
         self.score -= self.score_increase(self.actors[i].node, self.actors[i].steps_left);
         self.actors[i].node = trace.0;

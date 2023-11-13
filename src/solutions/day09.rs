@@ -13,10 +13,6 @@ pub fn run(input: &str) -> (usize, usize) {
             }
         }
     }
-    // We transmute the (i16, i16) elements to u32 instead,
-    // allowing the uniqueness counter to save some energy sorting them.
-    let trail1: Vec<u32> = unsafe { std::mem::transmute(trail1) };
-    let trail2: Vec<u32> = unsafe { std::mem::transmute(trail2) };
     (count_unique(trail1), count_unique(trail2))
 }
 
@@ -40,7 +36,7 @@ fn step_rope(rope: &mut [(i16, i16)], dir: u8) -> u8 {
             return i as u8;
         }
     }
-    return rope.len() as u8;
+    rope.len() as u8
 }
 
 fn count_unique<T: Copy + Default + Ord>(mut data: Vec<T>) -> usize {
@@ -52,7 +48,7 @@ fn count_unique<T: Copy + Default + Ord>(mut data: Vec<T>) -> usize {
             (count + 1, *y)
         }
     });
-    res + 1
+    res
 }
 
 #[cfg(test)]

@@ -6,7 +6,7 @@ pub fn run(input: &str) -> (u32, u32) {
     for line in input
         .as_bytes()
         .split(|&b| b == b'\n')
-        .take_while(|l| l.len() > 0)
+        .take_while(|l| !l.is_empty())
     {
         let ranges = line.split(|&b| b == b'-' || b == b',').map(|n| {
             unsafe { std::str::from_utf8_unchecked(n) }

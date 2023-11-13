@@ -47,6 +47,12 @@ impl<T: Clone + Eq + Hash + std::fmt::Debug> CycleFinder<T> {
     }
 }
 
+impl<T: Clone + Eq + Hash + std::fmt::Debug> Default for CycleFinder<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

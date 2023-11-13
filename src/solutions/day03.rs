@@ -1,9 +1,9 @@
 use itertools::Itertools;
 
 fn priority(c: u8) -> u32 {
-    let p = if (b'A'..=b'Z').contains(&c) {
+    let p = if c.is_ascii_uppercase() {
         c - b'A' + 27
-    } else if (b'a'..=b'z').contains(&c) {
+    } else if c.is_ascii_lowercase() {
         c - b'a' + 1
     } else {
         panic!()

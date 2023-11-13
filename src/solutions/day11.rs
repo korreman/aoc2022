@@ -16,7 +16,7 @@ impl Operand {
     fn parse(input: &str) -> Self {
         input
             .parse::<u64>()
-            .map_or(Operand::Old, |n| Operand::Num(n))
+            .map_or(Operand::Old, Operand::Num)
     }
 
     fn get(&self, old: u64) -> u64 {

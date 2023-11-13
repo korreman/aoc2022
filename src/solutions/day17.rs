@@ -121,7 +121,7 @@ impl Tower {
 
                 let entry = HistoryEntry {
                     height: self.forgotten,
-                    rocks: rocks,
+                    rocks,
                 };
 
                 if let Some(pentry) = self.history.get(&key) {

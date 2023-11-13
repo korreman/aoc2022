@@ -22,8 +22,12 @@ pub trait Queue<T> {
     fn add(&mut self, priority: Self::Priority, item: T);
     fn next(&mut self) -> Option<(Self::Priority, T)>;
     fn len(&self) -> usize;
+    fn is_empty(&self) -> bool;
 }
 
+// TODO:
+// - Could probably get rid of `count` field.
+// - Use a static ringbuffer instead of a VecDeque.
 pub struct SlidingBucketQueue<const R: usize, T> {
     offset: usize,
     count: usize,
@@ -66,6 +70,10 @@ impl<const R: usize, T: Clone> Queue<T> for SlidingBucketQueue<R, T> {
 
     fn len(&self) -> usize {
         self.count
+    }
+
+    fn is_empty(&self) -> bool {
+        self.count == 0
     }
 }
 
@@ -127,6 +135,10 @@ impl<T> Queue<T> for RadixHeap<T> {
     fn len(&self) -> usize {
         self.buckets.iter().map(|bucket| bucket.len()).sum()
     }
+
+    fn is_empty(&self) -> bool {
+        self.buckets.iter().all(|bucket| bucket.is_empty())
+    }
 }
 
 impl<P: Priority, T> Queue<T> for BinaryHeap<Reverse<KVPair<P, T>>> {
@@ -146,6 +158,10 @@ impl<P: Priority, T> Queue<T> for BinaryHeap<Reverse<KVPair<P, T>>> {
 
     fn len(&self) -> usize {
         self.len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.is_empty()
     }
 }
 

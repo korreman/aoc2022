@@ -160,14 +160,14 @@ impl Row {
     fn left(mut self) -> Self {
         self.0[2] = self.0[2] << 1 | self.0[1] >> 63;
         self.0[1] = self.0[1] << 1 | self.0[0] >> 63;
-        self.0[0] = self.0[1] << 1;
+        self.0[0] <<= 1;
         self
     }
 
     fn right(mut self) -> Self {
         self.0[0] = self.0[0] >> 1 | self.0[1] << 63;
         self.0[1] = self.0[1] >> 1 | self.0[2] << 63;
-        self.0[2] = self.0[2] >> 1;
+        self.0[2] >>= 1;
         self
     }
 }

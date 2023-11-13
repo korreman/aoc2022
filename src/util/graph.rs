@@ -124,9 +124,7 @@ where
             .collect();
         let start = indices[&value.start];
         let data = value
-            .data
-            .into_iter()
-            .map(|(_, entry)| VecGraphEntry {
+            .data.into_values().map(|entry| VecGraphEntry {
                 value: entry.value,
                 neighbors: entry.neighbors.iter().map(|h| indices[h]).collect(),
             })
